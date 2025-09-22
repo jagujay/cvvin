@@ -1,0 +1,100 @@
+{
+  "mcqQuestions": [
+    {
+      "id": "q1",
+      "question": "What is the time complexity of accessing an element in a hash table (best case)?",
+      "options": [
+        "O(1)",
+        "O(log n)",
+        "O(n)",
+        "O(n²)"
+      ],
+      "correctAnswer": 0,
+      "category": "Data Structures",
+      "difficulty": "Medium"
+    },
+    {
+      "id": "q2",
+      "question": "Which of the following is NOT a principle of Object-Oriented Programming?",
+      "options": [
+        "Encapsulation",
+        "Inheritance",
+        "Polymorphism",
+        "Compilation"
+      ],
+      "correctAnswer": 3,
+      "category": "OOP",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "q3",
+      "question": "In React, what is the purpose of the useEffect hook?",
+      "options": [
+        "To manage component state",
+        "To handle side effects",
+        "To create context",
+        "To optimize performance"
+      ],
+      "correctAnswer": 1,
+      "category": "React",
+      "difficulty": "Medium"
+    }
+  ],
+  "codingQuestions": [
+    {
+      "id": "c1",
+      "title": "Two Sum",
+      "difficulty": "Easy",
+      "description": "Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.\n\nYou can return the answer in any order.",
+      "examples": [
+        {
+          "input": "nums = [2,7,11,15], target = 9",
+          "output": "[0,1]",
+          "explanation": "Because nums[0] + nums[1] == 9, we return [0, 1]."
+        }
+      ],
+      "constraints": [
+        "2 ≤ nums.length ≤ 10⁴",
+        "-10⁹ ≤ nums[i] ≤ 10⁹",
+        "-10⁹ ≤ target ≤ 10⁹",
+        "Only one valid answer exists."
+      ],
+      "starterCode": "function twoSum(nums, target) {\n    // Your code here\n}",
+      "testCases": [
+        {
+          "input": "([2,7,11,15], 9)",
+          "expected": "[0,1]"
+        }
+      ]
+    }
+  ],
+  "hrQuestions": [
+    {
+      "id": "hr1",
+      "question": "Tell me about yourself.",
+      "category": "Introduction",
+      "followUps": [
+        "What interests you most about this role?",
+        "How do your experiences align with our company values?"
+      ]
+    },
+    {
+      "id": "hr2", 
+      "question": "Why are you interested in this position?",
+      "category": "Motivation",
+      "followUps": [
+        "What specific aspects of this role excite you?",
+        "How does this align with your career goals?"
+      ]
+    },
+    {
+      "id": "hr3",
+      "question": "Describe a challenging project you worked on. How did you handle it?",
+      "category": "Problem Solving",
+      "followUps": [
+        "What would you do differently if you faced a similar situation?",
+        "How did you measure the success of your solution?"
+      ]
+    }
+  ]
+}

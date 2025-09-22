@@ -1,0 +1,94 @@
+{
+  "recentSessions": [
+    {
+      "id": "session_001",
+      "type": "Full Mock Interview",
+      "status": "completed",
+      "score": 85,
+      "date": "2024-01-18T14:30:00Z",
+      "duration": 3600,
+      "modules": {
+        "resume": {
+          "completed": true,
+          "score": 88,
+          "duration": 300
+        },
+        "technical": {
+          "completed": true,
+          "score": 82,
+          "duration": 1800
+        },
+        "hr": {
+          "completed": true,
+          "score": 87,
+          "duration": 1500
+        }
+      }
+    },
+    {
+      "id": "session_002",
+      "type": "Technical Interview",
+      "status": "completed",
+      "score": 76,
+      "date": "2024-01-15T10:15:00Z",
+      "duration": 1800,
+      "modules": {
+        "technical": {
+          "completed": true,
+          "score": 76,
+          "duration": 1800
+        }
+      }
+    },
+    {
+      "id": "session_003",
+      "type": "Resume Analysis",
+      "status": "completed",
+      "score": 92,
+      "date": "2024-01-12T16:45:00Z",
+      "duration": 300,
+      "modules": {
+        "resume": {
+          "completed": true,
+          "score": 92,
+          "duration": 300
+        }
+      }
+    },
+    {
+      "id": "session_004",
+      "type": "HR Interview",
+      "status": "completed",
+      "score": 79,
+      "date": "2024-01-10T11:20:00Z",
+      "duration": 1200,
+      "modules": {
+        "hr": {
+          "completed": true,
+          "score": 79,
+          "duration": 1200
+        }
+      }
+    }
+  ],
+  "stats": {
+    "totalSessions": 12,
+    "averageScore": 81,
+    "totalHoursPracticed": 18.5,
+    "improvementRate": 15,
+    "lastSessionDate": "2024-01-18T14:30:00Z",
+    "streak": 5
+  },
+  "emptyState": {
+    "hasAnySessions": false,
+    "recentSessions": [],
+    "stats": {
+      "totalSessions": 0,
+      "averageScore": 0,
+      "totalHoursPracticed": 0,
+      "improvementRate": 0,
+      "lastSessionDate": null,
+      "streak": 0
+    }
+  }
+}

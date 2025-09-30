@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
 import Landing from "./pages/Landing";
 import Login from "./pages/auth/Login";
 import VerifyOTP from "./pages/auth/VerifyOTP";
@@ -28,36 +29,38 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/auth" element={<Login />} />
-          <Route path="/auth/verify-otp" element={<VerifyOTP />} />
-          <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-          <Route path="/auth/verify-reset-code" element={<VerifyResetCode />} />
-          <Route path="/auth/set-new-password" element={<SetNewPassword />} />
-          <Route path="/profile-setup" element={<ProfileSetup />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/profile/edit" element={<ProfileSetup />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/resume-analysis" element={<ResumeAnalysis />} />
-          <Route path="/interview/full-mock" element={<FullMockInterview />} />
-          <Route path="/interview/setup" element={<PreInterviewSetup />} />
-          <Route path="/technical-interview" element={<TechnicalLanding />} />
-          <Route path="/technical-interview/mcq" element={<MCQTest />} />
-          <Route path="/technical-interview/coding" element={<CodingChallenge />} />
-          <Route path="/hr-interview" element={<HRLanding />} />
-          <Route path="/hr-interview/session" element={<HRSession />} />
-          <Route path="/feedback" element={<FeedbackList />} />
-          <Route path="/feedback/:sessionId" element={<FeedbackDetail />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/auth" element={<Login />} />
+            <Route path="/auth/verify-otp" element={<VerifyOTP />} />
+            <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+            <Route path="/auth/verify-reset-code" element={<VerifyResetCode />} />
+            <Route path="/auth/set-new-password" element={<SetNewPassword />} />
+            <Route path="/profile-setup" element={<ProfileSetup />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/edit" element={<ProfileSetup />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/resume-analysis" element={<ResumeAnalysis />} />
+            <Route path="/interview/full-mock" element={<FullMockInterview />} />
+            <Route path="/interview/setup" element={<PreInterviewSetup />} />
+            <Route path="/technical-interview" element={<TechnicalLanding />} />
+            <Route path="/technical-interview/mcq" element={<MCQTest />} />
+            <Route path="/technical-interview/coding" element={<CodingChallenge />} />
+            <Route path="/hr-interview" element={<HRLanding />} />
+            <Route path="/hr-interview/session" element={<HRSession />} />
+            <Route path="/feedback" element={<FeedbackList />} />
+            <Route path="/feedback/:sessionId" element={<FeedbackDetail />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

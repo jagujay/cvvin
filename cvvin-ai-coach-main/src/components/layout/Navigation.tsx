@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { User, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import logoImage from "@/assets/logo.png";
 
 interface NavigationProps {
@@ -24,14 +25,16 @@ const Navigation = ({ isAuthenticated = false, user }: NavigationProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { logout } = useAuth();
 
-  const handleLogout = () => {
-    // Mock logout - in real app this would clear auth tokens
-    toast({
-      title: "Logged out successfully",
-      description: "You have been logged out of your account.",
-    });
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/");
+    } catch (error) {
+      // Error handling is done in the AuthContext
+      console.error("Logout error:", error);
+    }
   };
 
   return (

@@ -8,17 +8,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
 import logoImage from "@/assets/logo.png";
-import userData from "@/mock/user.json";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [demoUserType, setDemoUserType] = useState<'new' | 'returning'>('returning');
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { login, signup, googleSignIn, sendCustomOTP } = useAuth();
 
   const [loginForm, setLoginForm] = useState({
     email: "",
@@ -28,42 +28,25 @@ const Login = () => {
   const [signupForm, setSignupForm] = useState({
     email: "",
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
+    displayName: ""
   });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Mock login validation
-    if (!loginForm.email || !loginForm.password) {
-      toast({
-        variant: "destructive",
-        title: "Validation Error",
-        description: "Please fill in all fields."
-      });
+    try {
+      await login(loginForm.email, loginForm.password);
+      // Navigation will be handled by the AuthProvider and routing logic
+      navigate("/dashboard");
+    } catch (error) {
+      // Error handling is done in the AuthContext
+      console.error("Login error:", error);
+      // Don't navigate on error - let the user see the error message
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    // Simulate API call
-    setTimeout(() => {
-      // Demo mode - accept any credentials
-      const user = demoUserType === 'new' ? userData.user : userData.completedProfile;
-      
-      toast({
-        title: "Login Successful",
-        description: `Welcome ${demoUserType === 'new' ? 'new user' : 'back'} to CVVIN!`
-      });
-      
-      // Route based on profile completion
-      if (user.isProfileComplete) {
-        navigate("/dashboard", { state: { demoUserType } });
-      } else {
-        navigate("/profile-setup", { state: { demoUserType } });
-      }
-      setIsLoading(false);
-    }, 1000);
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -71,7 +54,7 @@ const Login = () => {
     setIsLoading(true);
 
     // Validation
-    if (!signupForm.email || !signupForm.password || !signupForm.confirmPassword) {
+    if (!signupForm.email || !signupForm.password || !signupForm.confirmPassword || !signupForm.displayName) {
       toast({
         variant: "destructive",
         title: "Validation Error", 
@@ -91,32 +74,44 @@ const Login = () => {
       return;
     }
 
-    // Simulate API call
-    setTimeout(() => {
+    if (signupForm.password.length < 6) {
       toast({
-        title: "Verification Required",
-        description: "Please check your email for verification code."
+        variant: "destructive",
+        title: "Password Too Short",
+        description: "Password must be at least 6 characters long."
       });
-      navigate("/auth/verify-otp", { state: { email: signupForm.email } });
       setIsLoading(false);
-    }, 1000);
+      return;
+    }
+
+    try {
+      // First create the Firebase user
+      await signup(signupForm.email, signupForm.password, signupForm.displayName);
+      
+      // Then send custom OTP email
+      await sendCustomOTP(signupForm.email, 'verification');
+      
+      // Navigate to email verification page
+      navigate("/auth/verify-otp", { state: { email: signupForm.email } });
+    } catch (error) {
+      // Error handling is done in the AuthContext
+      console.error("Signup error:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleGoogleLogin = () => {
-    const user = demoUserType === 'new' ? userData.user : userData.completedProfile;
-    
-    toast({
-      title: "Login Successful",
-      description: `Welcome ${demoUserType === 'new' ? 'new user' : 'back'} to CVVIN via Google!`
-    });
-    // Demo mode - simulate successful Google login
-    setTimeout(() => {
-      if (user.isProfileComplete) {
-        navigate("/dashboard", { state: { demoUserType } });
-      } else {
-        navigate("/profile-setup", { state: { demoUserType } });
-      }
-    }, 1000);
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    try {
+      await googleSignIn();
+      navigate("/dashboard");
+    } catch (error) {
+      // Error handling is done in the AuthContext
+      console.error("Google sign in error:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -129,39 +124,6 @@ const Login = () => {
             </div>
             <CardTitle className="text-2xl font-bold">Welcome to CVVIN</CardTitle>
             <p className="text-muted-foreground">Your AI interview preparation partner</p>
-            <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
-              <strong>Demo Mode:</strong> Use any email/password to login
-            </div>
-            <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded text-xs text-orange-800">
-              <div className="flex items-center justify-between">
-                <span><strong>Test User Type:</strong></span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setDemoUserType('new')}
-                    className={`px-2 py-1 rounded text-xs font-medium ${
-                      demoUserType === 'new' 
-                        ? 'bg-orange-200 text-orange-800' 
-                        : 'bg-orange-100 text-orange-600 hover:bg-orange-200'
-                    }`}
-                  >
-                    New User
-                  </button>
-                  <button
-                    onClick={() => setDemoUserType('returning')}
-                    className={`px-2 py-1 rounded text-xs font-medium ${
-                      demoUserType === 'returning' 
-                        ? 'bg-orange-200 text-orange-800' 
-                        : 'bg-orange-100 text-orange-600 hover:bg-orange-200'
-                    }`}
-                  >
-                    Returning User
-                  </button>
-                </div>
-              </div>
-              <div className="mt-1 text-xs">
-                {demoUserType === 'new' ? '→ Will go to Profile Setup' : '→ Will go to Dashboard'}
-              </div>
-            </div>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login" className="w-full">
@@ -221,6 +183,17 @@ const Login = () => {
 
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-4">
+                  <div>
+                    <Label htmlFor="signup-name">Full Name</Label>
+                    <Input
+                      id="signup-name"
+                      type="text"
+                      placeholder="Enter your full name"
+                      value={signupForm.displayName}
+                      onChange={(e) => setSignupForm({ ...signupForm, displayName: e.target.value })}
+                      className="mt-1"
+                    />
+                  </div>
                   <div>
                     <Label htmlFor="signup-email">Email Address</Label>
                     <Input
@@ -296,6 +269,7 @@ const Login = () => {
                 variant="outline" 
                 className="w-full mt-4" 
                 onClick={handleGoogleLogin}
+                disabled={isLoading}
               >
                 <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                   <path
@@ -315,7 +289,7 @@ const Login = () => {
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                   />
                 </svg>
-                Continue with Google
+                {isLoading ? "Signing in..." : "Continue with Google"}
               </Button>
             </div>
           </CardContent>

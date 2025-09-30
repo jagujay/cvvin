@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
 import logoImage from "@/assets/logo.png";
 
@@ -14,14 +15,27 @@ const VerifyOTP = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { currentUser, sendCustomOTP, verifyCustomOTP, isEmailVerified } = useAuth();
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   
-  const email = location.state?.email || "";
+  const email = location.state?.email || currentUser?.email || "";
+  const otpType = location.state?.type || 'verification';
 
   useEffect(() => {
     // Focus first input on mount
     inputRefs.current[0]?.focus();
   }, []);
+
+  // Check if email is already verified
+  useEffect(() => {
+    if (isEmailVerified) {
+      toast({
+        title: "Email Already Verified",
+        description: "Your email is already verified. Redirecting to dashboard..."
+      });
+      navigate("/dashboard");
+    }
+  }, [isEmailVerified, navigate, toast]);
 
   useEffect(() => {
     if (resendCooldown > 0) {
@@ -65,32 +79,32 @@ const VerifyOTP = () => {
       return;
     }
 
-    // Simulate API call
-    setTimeout(() => {
-      // Mock successful verification (accept any 6-digit code)
-      if (otpString.length === 6) {
-        toast({
-          title: "Account Verified!",
-          description: "Your account has been created successfully."
-        });
-        navigate("/auth");
+    try {
+      // Verify OTP using our custom service
+      await verifyCustomOTP(email, otpString, otpType);
+      
+      // Navigate based on OTP type
+      if (otpType === 'reset') {
+        navigate("/auth/set-new-password", { state: { email } });
       } else {
-        toast({
-          variant: "destructive",
-          title: "Verification Failed",
-          description: "Invalid or expired OTP. Please try again."
-        });
+        navigate("/dashboard");
       }
+    } catch (error) {
+      // Error handling is done in the AuthContext
+      console.error("OTP verification error:", error);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
-  const handleResendOTP = () => {
+  const handleResendOTP = async () => {
     setResendCooldown(30);
-    toast({
-      title: "OTP Sent",
-      description: "A new verification code has been sent to your email."
-    });
+    try {
+      await sendCustomOTP(email, otpType);
+    } catch (error) {
+      // Error handling is done in the AuthContext
+      console.error("Resend OTP error:", error);
+    }
   };
 
   return (
@@ -101,13 +115,18 @@ const VerifyOTP = () => {
             <div className="flex justify-center mb-4">
               <img src={logoImage} alt="CVVIN" className="h-12 w-auto" />
             </div>
-            <CardTitle className="text-2xl font-bold">Check Your Email</CardTitle>
+            <CardTitle className="text-2xl font-bold">
+              {otpType === 'reset' ? 'Password Reset Code' : 'Check Your Email'}
+            </CardTitle>
             <p className="text-muted-foreground">
-              We've sent a 6-digit verification code to
+              {otpType === 'reset' 
+                ? 'We\'ve sent a password reset code to'
+                : 'We\'ve sent a verification code to'
+              }
             </p>
             <p className="text-sm font-medium text-primary">{email}</p>
             <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
-              <strong>Demo Mode:</strong> Enter any 6 digits to proceed (e.g., 123456)
+              <strong>Note:</strong> The code will expire in 10 minutes
             </div>
           </CardHeader>
           <CardContent>
@@ -131,7 +150,7 @@ const VerifyOTP = () => {
               </div>
 
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Verifying..." : "Verify Account"}
+                {isLoading ? "Verifying..." : (otpType === 'reset' ? "Verify Reset Code" : "Verify Account")}
               </Button>
 
               <div className="text-center space-y-2">

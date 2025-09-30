@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -16,20 +16,25 @@ import {
   CheckCircle2,
   HelpCircle
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
-import userData from "@/mock/user.json";
 import sessionsData from "@/mock/sessions.json";
 import Walkthrough from "@/components/ui/walkthrough";
 import { useWalkthrough, WalkthroughStep } from "@/hooks/use-walkthrough";
 
 const Dashboard = () => {
-  const location = useLocation();
-  const demoUserType = location.state?.demoUserType || 'returning';
-  const user = demoUserType === 'new' ? userData.user : userData.completedProfile;
-  // For new users, show empty state. For returning users, show activity
-  const sessions = demoUserType === 'new' ? [] : sessionsData.recentSessions;
-  const stats = demoUserType === 'new' ? null : sessionsData.stats;
-  const hasActivity = demoUserType === 'returning' && sessions.length > 0;
+  const { currentUser } = useAuth();
+  
+  // For now, we'll use mock data. In a real implementation, this would come from Firestore
+  const sessions = sessionsData.recentSessions;
+  const stats = sessionsData.stats;
+  const hasActivity = sessions.length > 0;
+  
+  // Mock user data - in real implementation, this would come from Firestore
+  const user = {
+    fullName: currentUser?.displayName || "User",
+    isProfileComplete: false // This would come from Firestore
+  };
 
   // Walkthrough steps for new users - simplified
   const walkthroughSteps: WalkthroughStep[] = [
@@ -127,14 +132,7 @@ const Dashboard = () => {
   ] : [];
 
   return (
-    <Layout 
-      isAuthenticated={true} 
-      user={{ 
-        fullName: user.fullName, 
-        profilePicture: user.profilePicture,
-        isProfileComplete: user.isProfileComplete
-      }}
-    >
+    <Layout>
       <div className="container mx-auto px-6 py-8">
         <div className="max-w-7xl mx-auto">
           {/* Welcome Section */}
@@ -206,7 +204,6 @@ const Dashboard = () => {
                   >
                     <Link 
                       to={action.path}
-                      state={{ demoUserType }}
                     >
                       <CardContent className="p-6 text-center">
                         <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br ${action.gradient} flex items-center justify-center group-hover:scale-110 transition-smooth`}>
@@ -249,7 +246,6 @@ const Dashboard = () => {
                     <Link 
                       to="/interview/full-mock" 
                       className="flex items-center gap-2"
-                      state={{ demoUserType }}
                     >
                       <Play className="w-5 h-5" />
                       Start Full Mock Interview
@@ -332,7 +328,7 @@ const Dashboard = () => {
                 {/* Simple Action Grid */}
                 <div className="grid md:grid-cols-3 gap-6 mb-8">
                   <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer group">
-                    <Link to="/resume-analysis" className="block" state={{ demoUserType }}>
+                    <Link to="/resume-analysis" className="block">
                       <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                         <FileText className="w-6 h-6 text-blue-600" />
                       </div>
@@ -344,7 +340,7 @@ const Dashboard = () => {
                   </Card>
 
                   <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer group">
-                    <Link to="/technical-interview" className="block" state={{ demoUserType }}>
+                    <Link to="/technical-interview" className="block">
                       <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                         <Code2 className="w-6 h-6 text-purple-600" />
                       </div>
@@ -356,7 +352,7 @@ const Dashboard = () => {
                   </Card>
 
                   <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer group">
-                    <Link to="/hr-interview" className="block" state={{ demoUserType }}>
+                    <Link to="/hr-interview" className="block">
                       <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                         <MessageSquare className="w-6 h-6 text-green-600" />
                       </div>
@@ -378,7 +374,7 @@ const Dashboard = () => {
                       Take a full mock interview with resume analysis, technical round, HR round, and detailed feedback
                     </p>
                     <Button asChild size="lg" className="bg-white text-accent hover:bg-white/90 font-semibold">
-                      <Link to="/interview/full-mock" state={{ demoUserType }}>
+                      <Link to="/interview/full-mock">
                         Start Full Mock Interview
                       </Link>
                     </Button>

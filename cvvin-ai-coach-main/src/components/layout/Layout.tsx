@@ -1,24 +1,26 @@
 import { ReactNode } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import Navigation from "./Navigation";
 import Footer from "./Footer";
 
 interface LayoutProps {
   children: ReactNode;
-  isAuthenticated?: boolean;
-  user?: {
-    fullName: string;
-    profilePicture?: string;
-    isProfileComplete?: boolean;
-  };
   showFooter?: boolean;
 }
 
 const Layout = ({ 
   children, 
-  isAuthenticated = false, 
-  user, 
   showFooter = true 
 }: LayoutProps) => {
+  const { currentUser } = useAuth();
+  
+  const isAuthenticated = !!currentUser;
+  const user = currentUser ? {
+    fullName: currentUser.displayName || "User",
+    profilePicture: currentUser.photoURL || undefined,
+    isProfileComplete: false // This would come from Firestore in a real implementation
+  } : undefined;
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navigation isAuthenticated={isAuthenticated} user={user} />

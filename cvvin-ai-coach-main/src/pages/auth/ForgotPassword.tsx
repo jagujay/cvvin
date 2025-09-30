@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
 import logoImage from "@/assets/logo.png";
 
@@ -14,6 +15,7 @@ const ForgotPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { resetPassword, sendCustomOTP } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,15 +31,23 @@ const ForgotPassword = () => {
       return;
     }
 
-    // Simulate API call
-    setTimeout(() => {
-      toast({
-        title: "Reset Code Sent",
-        description: "Please check your email for the reset code."
+    try {
+      // Send custom OTP for password reset
+      await sendCustomOTP(email, 'reset');
+      
+      // Navigate to OTP verification page
+      navigate("/auth/verify-otp", { 
+        state: { 
+          email: email,
+          type: 'reset'
+        } 
       });
-      navigate("/auth/verify-reset-code", { state: { email } });
+    } catch (error) {
+      // Error handling is done in the AuthContext
+      console.error("Password reset error:", error);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (

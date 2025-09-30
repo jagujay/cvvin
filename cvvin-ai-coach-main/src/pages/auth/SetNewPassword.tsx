@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { otpService } from "@/services/otpService";
 import Layout from "@/components/layout/Layout";
 import logoImage from "@/assets/logo.png";
 
@@ -20,7 +21,6 @@ const SetNewPassword = () => {
   const { toast } = useToast();
   
   const email = location.state?.email || "";
-  const resetToken = location.state?.resetToken || "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,15 +56,27 @@ const SetNewPassword = () => {
       return;
     }
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Reset password using backend API
+      await otpService.resetPassword({
+        email: email,
+        newPassword: newPassword
+      });
+
       toast({
         title: "Password Reset Successfully!",
         description: "Your password has been updated. Please log in with your new password."
       });
       navigate("/auth");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Password Reset Failed",
+        description: error.message || "An error occurred while updating your password."
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (

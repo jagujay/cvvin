@@ -1,0 +1,328 @@
+{
+  "questions": [
+    {
+      "id": "hr_001",
+      "category": "Introduction",
+      "question": "Tell me about yourself and why you're interested in this role.",
+      "followUps": [
+        "What specifically interests you about our company?",
+        "How does this role align with your career goals?"
+      ],
+      "tips": [
+        "Keep your answer concise and relevant to the role",
+        "Focus on your professional background and key achievements",
+        "Connect your experience to the job requirements"
+      ],
+      "timeLimit": 120,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the role and company"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_002",
+      "category": "Experience",
+      "question": "Describe a challenging project you worked on and how you overcame the obstacles.",
+      "followUps": [
+        "What would you do differently if you faced a similar situation again?",
+        "How did you communicate with stakeholders during this challenge?"
+      ],
+      "tips": [
+        "Use the STAR method (Situation, Task, Action, Result)",
+        "Focus on your specific contributions and problem-solving approach",
+        "Highlight the positive outcome and lessons learned"
+      ],
+      "timeLimit": 180,
+      "rubric": {
+        "structure": {
+          "weight": 25,
+          "description": "Well-structured response using STAR or similar framework"
+        },
+        "problemSolving": {
+          "weight": 35,
+          "description": "Demonstrates strong problem-solving and analytical skills"
+        },
+        "impact": {
+          "weight": 25,
+          "description": "Shows measurable impact and positive outcomes"
+        },
+        "reflection": {
+          "weight": 15,
+          "description": "Shows self-awareness and ability to learn from experiences"
+        }
+      }
+    },
+    {
+      "id": "hr_003",
+      "category": "Teamwork",
+      "question": "Tell me about a time when you had to work with a difficult team member. How did you handle the situation?",
+      "followUps": [
+        "What strategies do you use to build rapport with new team members?",
+        "How do you handle conflicts in a team setting?"
+      ],
+      "tips": [
+        "Focus on your diplomatic approach and conflict resolution skills",
+        "Avoid speaking negatively about the difficult person",
+        "Emphasize the positive outcome and team harmony"
+      ],
+      "timeLimit": 150,
+      "rubric": {
+        "diplomacy": {
+          "weight": 30,
+          "description": "Diplomatic approach to handling difficult situations"
+        },
+        "collaboration": {
+          "weight": 25,
+          "description": "Demonstrates strong collaboration and teamwork skills"
+        },
+        "conflictResolution": {
+          "weight": 30,
+          "description": "Effective conflict resolution and problem-solving"
+        },
+        "professionalism": {
+          "weight": 15,
+          "description": "Maintains professionalism when discussing challenges"
+        }
+      }
+    },
+    {
+      "id": "hr_004",
+      "category": "Leadership",
+      "question": "Describe a time when you had to lead a team or project. What was your approach?",
+      "followUps": [
+        "How do you motivate team members who are struggling?",
+        "What's your leadership style and how do you adapt it to different situations?"
+      ],
+      "tips": [
+        "Highlight your leadership philosophy and approach",
+        "Provide specific examples of how you guided the team to success",
+        "Show how you adapted your style to meet team needs"
+      ],
+      "timeLimit": 180,
+      "rubric": {
+        "leadership": {
+          "weight": 35,
+          "description": "Demonstrates strong leadership qualities and vision"
+        },
+        "teamManagement": {
+          "weight": 25,
+          "description": "Effective team management and delegation skills"
+        },
+        "results": {
+          "weight": 25,
+          "description": "Achieved positive results and team success"
+        },
+        "adaptability": {
+          "weight": 15,
+          "description": "Shows ability to adapt leadership style as needed"
+        }
+      }
+    },
+    {
+      "id": "hr_005",
+      "category": "Problem Solving",
+      "question": "Tell me about a time when you had to make a decision with incomplete information. How did you approach it?",
+      "followUps": [
+        "How do you typically gather information when making important decisions?",
+        "What's your process for evaluating risks and benefits?"
+      ],
+      "tips": [
+        "Explain your decision-making framework and process",
+        "Show how you managed uncertainty and risk",
+        "Highlight the positive outcome despite incomplete information"
+      ],
+      "timeLimit": 150,
+      "rubric": {
+        "decisionMaking": {
+          "weight": 35,
+          "description": "Sound decision-making process and logical reasoning"
+        },
+        "riskAssessment": {
+          "weight": 25,
+          "description": "Ability to assess and manage risks effectively"
+        },
+        "adaptability": {
+          "weight": 25,
+          "description": "Adaptability and flexibility in uncertain situations"
+        },
+        "outcome": {
+          "weight": 15,
+          "description": "Positive outcome despite challenges"
+        }
+      }
+    },
+    {
+      "id": "hr_006",
+      "category": "Motivation",
+      "question": "What motivates you in your work, and how do you stay engaged during challenging periods?",
+      "followUps": [
+        "How do you handle stress and pressure in the workplace?",
+        "What kind of work environment brings out your best performance?"
+      ],
+      "tips": [
+        "Be authentic about what genuinely motivates you",
+        "Connect your motivations to the role and company",
+        "Show resilience and positive attitude toward challenges"
+      ],
+      "timeLimit": 120,
+      "rubric": {
+        "authenticity": {
+          "weight": 25,
+          "description": "Genuine and authentic response about personal motivations"
+        },
+        "alignment": {
+          "weight": 30,
+          "description": "Motivations align well with the role and company culture"
+        },
+        "resilience": {
+          "weight": 25,
+          "description": "Shows resilience and positive approach to challenges"
+        },
+        "selfAwareness": {
+          "weight": 20,
+          "description": "Strong self-awareness and emotional intelligence"
+        }
+      }
+    },
+    {
+      "id": "hr_007",
+      "category": "Growth",
+      "question": "Where do you see yourself in 5 years, and how does this role fit into your career plans?",
+      "followUps": [
+        "What skills are you most interested in developing?",
+        "How do you typically approach learning new technologies or skills?"
+      ],
+      "tips": [
+        "Show ambition while being realistic about career progression",
+        "Connect your goals to potential growth within the company",
+        "Demonstrate commitment to continuous learning and development"
+      ],
+      "timeLimit": 120,
+      "rubric": {
+        "vision": {
+          "weight": 30,
+          "description": "Clear career vision and realistic goals"
+        },
+        "alignment": {
+          "weight": 25,
+          "description": "Career goals align with company opportunities"
+        },
+        "growth": {
+          "weight": 25,
+          "description": "Shows commitment to continuous learning and growth"
+        },
+        "stability": {
+          "weight": 20,
+          "description": "Indicates likely long-term commitment to the role"
+        }
+      }
+    },
+    {
+      "id": "hr_008",
+      "category": "Weakness",
+      "question": "What is your biggest weakness, and how are you working to improve it?",
+      "followUps": [
+        "Can you give me a specific example of how this weakness has affected your work?",
+        "What steps have you taken to address this weakness?"
+      ],
+      "tips": [
+        "Choose a real weakness, not a disguised strength",
+        "Show self-awareness and honesty",
+        "Focus on the steps you're taking to improve"
+      ],
+      "timeLimit": 120,
+      "rubric": {
+        "honesty": {
+          "weight": 30,
+          "description": "Honest and genuine response, not a disguised strength"
+        },
+        "selfAwareness": {
+          "weight": 25,
+          "description": "Shows strong self-awareness and reflection"
+        },
+        "improvement": {
+          "weight": 30,
+          "description": "Concrete steps being taken to address the weakness"
+        },
+        "professionalism": {
+          "weight": 15,
+          "description": "Maintains professionalism while showing vulnerability"
+        }
+      }
+    }
+  ],
+  "interviewFlow": {
+    "warmUp": {
+      "duration": 300,
+      "questions": ["hr_001"],
+      "description": "Introduction and getting comfortable"
+    },
+    "coreQuestions": {
+      "duration": 1200,
+      "questions": ["hr_002", "hr_003", "hr_004", "hr_005"],
+      "description": "Main behavioral interview questions"
+    },
+    "closing": {
+      "duration": 300,
+      "questions": ["hr_006", "hr_007", "hr_008"],
+      "description": "Motivation, growth, and self-reflection"
+    }
+  },
+  "tips": {
+    "general": [
+      "Use the STAR method (Situation, Task, Action, Result) for behavioral questions",
+      "Be specific with examples and quantify results when possible",
+      "Show enthusiasm and genuine interest in the role and company",
+      "Prepare thoughtful questions to ask the interviewer",
+      "Practice your responses but keep them conversational, not scripted"
+    ],
+    "technical": [
+      "Be ready to explain technical concepts in simple terms",
+      "Discuss your problem-solving approach and thought process",
+      "Show curiosity and willingness to learn new technologies",
+      "Explain how you stay updated with industry trends"
+    ],
+    "delivery": [
+      "Maintain good eye contact and confident body language",
+      "Speak clearly and at an appropriate pace",
+      "Listen carefully to questions and ask for clarification if needed",
+      "Show your personality while remaining professional"
+    ]
+  },
+  "scoring": {
+    "excellent": {
+      "range": [90, 100],
+      "description": "Outstanding response with exceptional depth and insight"
+    },
+    "good": {
+      "range": [75, 89],
+      "description": "Strong response that addresses all aspects of the question well"
+    },
+    "satisfactory": {
+      "range": [60, 74],
+      "description": "Adequate response that meets basic expectations"
+    },
+    "needsImprovement": {
+      "range": [40, 59],
+      "description": "Response lacks depth or misses key aspects"
+    },
+    "poor": {
+      "range": [0, 39],
+      "description": "Inadequate response that fails to address the question effectively"
+    }
+  }
+}

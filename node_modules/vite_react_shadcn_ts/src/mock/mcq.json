@@ -1,0 +1,187 @@
+{
+  "questions": [
+    {
+      "id": "mcq_001",
+      "category": "JavaScript",
+      "difficulty": "medium",
+      "timeLimit": 120,
+      "question": "What will be the output of the following JavaScript code?\n\n```javascript\nconsole.log(typeof null);\nconsole.log(typeof undefined);\nconsole.log(typeof {});\nconsole.log(typeof []);\n```",
+      "options": [
+        "null, undefined, object, array",
+        "object, undefined, object, object",
+        "null, undefined, object, object",
+        "object, undefined, object, array"
+      ],
+      "correctAnswer": 1,
+      "explanation": "In JavaScript, `typeof null` returns 'object' (a known quirk), `typeof undefined` returns 'undefined', `typeof {}` returns 'object', and `typeof []` returns 'object' (arrays are objects in JavaScript).",
+      "tags": ["javascript", "types", "fundamentals"]
+    },
+    {
+      "id": "mcq_002",
+      "category": "React",
+      "difficulty": "medium",
+      "timeLimit": 90,
+      "question": "Which of the following is the correct way to update state in a functional component using hooks?",
+      "options": [
+        "this.setState({count: count + 1})",
+        "setState(count + 1)",
+        "setCount(count + 1)",
+        "updateState({count: count + 1})"
+      ],
+      "correctAnswer": 2,
+      "explanation": "In functional components with hooks, you use the setter function returned by useState. If you have `const [count, setCount] = useState(0)`, then `setCount(count + 1)` is the correct way to update the state.",
+      "tags": ["react", "hooks", "state"]
+    },
+    {
+      "id": "mcq_003",
+      "category": "Data Structures",
+      "difficulty": "easy",
+      "timeLimit": 60,
+      "question": "What is the time complexity of accessing an element by index in an array?",
+      "options": [
+        "O(n)",
+        "O(log n)",
+        "O(1)",
+        "O(n²)"
+      ],
+      "correctAnswer": 2,
+      "explanation": "Array access by index is O(1) or constant time because arrays store elements in contiguous memory locations, allowing direct calculation of memory address using the index.",
+      "tags": ["data-structures", "arrays", "time-complexity"]
+    },
+    {
+      "id": "mcq_004",
+      "category": "Algorithms",
+      "difficulty": "medium",
+      "timeLimit": 120,
+      "question": "Which sorting algorithm has the best average-case time complexity?",
+      "options": [
+        "Bubble Sort - O(n²)",
+        "Merge Sort - O(n log n)",
+        "Selection Sort - O(n²)",
+        "Insertion Sort - O(n²)"
+      ],
+      "correctAnswer": 1,
+      "explanation": "Merge Sort has O(n log n) time complexity in all cases (best, average, and worst), making it more efficient than the O(n²) algorithms listed. Other efficient algorithms include Quick Sort (average O(n log n)) and Heap Sort (O(n log n)).",
+      "tags": ["algorithms", "sorting", "time-complexity"]
+    },
+    {
+      "id": "mcq_005",
+      "category": "Database",
+      "difficulty": "medium",
+      "timeLimit": 90,
+      "question": "In SQL, which of the following statements about INNER JOIN is correct?",
+      "options": [
+        "Returns all rows from both tables",
+        "Returns only matching rows from both tables",
+        "Returns all rows from left table and matching rows from right table",
+        "Returns all rows from right table and matching rows from left table"
+      ],
+      "correctAnswer": 1,
+      "explanation": "INNER JOIN returns only the rows that have matching values in both tables. It excludes rows that don't have matches in either table.",
+      "tags": ["sql", "joins", "database"]
+    },
+    {
+      "id": "mcq_006",
+      "category": "System Design",
+      "difficulty": "hard",
+      "timeLimit": 180,
+      "question": "Which of the following is NOT a benefit of using a Content Delivery Network (CDN)?",
+      "options": [
+        "Reduced latency for users",
+        "Decreased server load",
+        "Improved data consistency",
+        "Better availability and redundancy"
+      ],
+      "correctAnswer": 2,
+      "explanation": "CDNs can actually create data consistency challenges because content is distributed across multiple servers. The other options are genuine benefits: CDNs reduce latency by serving content from geographically closer servers, decrease origin server load, and improve availability through redundancy.",
+      "tags": ["system-design", "cdn", "distributed-systems"]
+    },
+    {
+      "id": "mcq_007",
+      "category": "Python",
+      "difficulty": "easy",
+      "timeLimit": 60,
+      "question": "What will be the output of the following Python code?\n\n```python\nlist1 = [1, 2, 3]\nlist2 = list1\nlist2.append(4)\nprint(list1)\n```",
+      "options": [
+        "[1, 2, 3]",
+        "[1, 2, 3, 4]",
+        "[4]",
+        "Error"
+      ],
+      "correctAnswer": 1,
+      "explanation": "In Python, `list2 = list1` creates a reference to the same list object, not a copy. When you append to list2, you're modifying the same object that list1 references, so both variables will show [1, 2, 3, 4].",
+      "tags": ["python", "lists", "references"]
+    },
+    {
+      "id": "mcq_008",
+      "category": "Networking",
+      "difficulty": "medium",
+      "timeLimit": 90,
+      "question": "What is the main difference between HTTP and HTTPS?",
+      "options": [
+        "HTTPS is faster than HTTP",
+        "HTTPS uses encryption while HTTP does not",
+        "HTTP supports more methods than HTTPS",
+        "HTTPS works only with specific browsers"
+      ],
+      "correctAnswer": 1,
+      "explanation": "HTTPS (HTTP Secure) is HTTP with encryption. It uses SSL/TLS protocols to encrypt data transmitted between the client and server, providing security, data integrity, and authentication.",
+      "tags": ["networking", "http", "security"]
+    },
+    {
+      "id": "mcq_009",
+      "category": "Object-Oriented Programming",
+      "difficulty": "medium",
+      "timeLimit": 120,
+      "question": "Which OOP principle is demonstrated by the ability of different classes to respond to the same method call in their own way?",
+      "options": [
+        "Encapsulation",
+        "Inheritance",
+        "Polymorphism",
+        "Abstraction"
+      ],
+      "correctAnswer": 2,
+      "explanation": "Polymorphism allows objects of different classes to be treated as objects of a common base class, while each class can provide its own implementation of methods. This enables the same interface to be used for different underlying data types.",
+      "tags": ["oop", "polymorphism", "design-principles"]
+    },
+    {
+      "id": "mcq_010",
+      "category": "Web Development",
+      "difficulty": "easy",
+      "timeLimit": 60,
+      "question": "Which HTTP status code indicates that a resource was successfully created?",
+      "options": [
+        "200 OK",
+        "201 Created",
+        "204 No Content",
+        "301 Moved Permanently"
+      ],
+      "correctAnswer": 1,
+      "explanation": "HTTP status code 201 Created indicates that the request has been fulfilled and has resulted in one or more new resources being created. It's commonly returned after successful POST requests.",
+      "tags": ["web-development", "http", "status-codes"]
+    }
+  ],
+  "testConfig": {
+    "totalQuestions": 10,
+    "timePerQuestion": 90,
+    "totalTimeLimit": 900,
+    "passingScore": 70,
+    "categories": [
+      "JavaScript",
+      "React", 
+      "Python",
+      "Data Structures",
+      "Algorithms",
+      "Database",
+      "System Design",
+      "Networking",
+      "Object-Oriented Programming",
+      "Web Development"
+    ],
+    "difficultyDistribution": {
+      "easy": 30,
+      "medium": 50,
+      "hard": 20
+    }
+  }
+}

@@ -30,7 +30,7 @@ start "CVVIN Frontend" cmd /k "npm run dev"
 
 echo Development servers started!
 echo Frontend: http://localhost:8080
-echo Backend: http://localhost:3001
+echo Backend: http://localhost:3000
 echo.
 echo Press any key to exit...
 pause > nul

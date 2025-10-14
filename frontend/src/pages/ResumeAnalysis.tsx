@@ -19,19 +19,23 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/layout/Layout";
-import userData from "@/mock/user.json";
+import { useAuth } from "@/contexts/AuthContext";
+import { consolidatedAPI, FileUploadResponse, UserProfile, ResumeData } from "@/services/consolidatedAPI";
 import resumeAnalysisData from "@/mock/resumeAnalysis.json";
 
 const ResumeAnalysis = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [jobDescription, setJobDescription] = useState("");
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [resumeData, setResumeData] = useState<ResumeData | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<FileUploadResponse | null>(null);
   const { toast } = useToast();
-
-  const user = userData.completedProfile; // Use completed profile for demo
   
   // Check if this is part of full mock flow
   const fromFullMock = location.state?.fromFullMock;
@@ -39,10 +43,28 @@ const ResumeAnalysis = () => {
   const currentStage = location.state?.currentStage;
   const nextStage = location.state?.nextStage;
 
+  // Load user profile data on component mount
   useEffect(() => {
-    // Auto-populate job description if user has one and this is from full mock
-    if (fromFullMock && user.hasJobDescription) {
-      setJobDescription(`Senior Frontend Developer - TechCorp Inc.
+    const loadUserData = async () => {
+      if (!currentUser) return;
+      
+      try {
+        // Load user profile
+        const profile = await consolidatedAPI.getUserProfile(currentUser);
+        setUserProfile(profile);
+        
+        // Try to load resume data
+        try {
+          const resume = await consolidatedAPI.getUserResumeData(currentUser);
+          setResumeData(resume);
+        } catch (error) {
+          // Resume data might not exist yet, that's okay
+          console.log('No resume data found yet');
+        }
+        
+        // Auto-populate job description if this is from full mock
+        if (fromFullMock) {
+          setJobDescription(`Senior Frontend Developer - TechCorp Inc.
 
 We are seeking a talented Senior Frontend Developer to join our dynamic team. You will be responsible for creating exceptional user experiences and implementing cutting-edge web applications.
 
@@ -70,26 +92,78 @@ Preferred Skills:
 
 Location: San Francisco, CA (Hybrid)
 Salary: $120,000 - $160,000`);
-    }
-  }, [fromFullMock, user.hasJobDescription]);
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
+        }
+      } catch (error) {
+        console.error('Failed to load user data:', error);
         toast({
           variant: "destructive",
-          title: "File Too Large",
-          description: "Please upload a file smaller than 5MB."
+          title: "Failed to Load Profile",
+          description: "Could not load your profile data. Please try refreshing the page."
         });
-        return;
       }
-      setResumeFile(file);
+    };
+
+    loadUserData();
+  }, [currentUser, fromFullMock, toast]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser) return;
+    
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "File Too Large",
+        description: "Please upload a file smaller than 5MB."
+      });
+      return;
+    }
+
+    // Only allow PDF files for now
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      toast({
+        variant: "destructive",
+        title: "Invalid File Type",
+        description: "Please upload a PDF file."
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    setResumeFile(file);
+
+    try {
+      const uploadResult = await consolidatedAPI.uploadFile(currentUser, file);
+      setUploadedFile(uploadResult);
+      
+      toast({
+        title: "File Uploaded Successfully",
+        description: `Resume "${file.name}" has been uploaded and is ready for analysis.`
+      });
+    } catch (error: any) {
+      console.error('File upload failed:', error);
+      toast({
+        variant: "destructive",
+        title: "Upload Failed",
+        description: error.message || "Failed to upload file. Please try again."
+      });
+      setResumeFile(null);
+    } finally {
+      setIsUploading(false);
     }
   };
 
   const handleAnalyze = async () => {
-    // Always require both resume and JD (same as modular)
+    if (!currentUser) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Required",
+        description: "Please log in to analyze your resume."
+      });
+      return;
+    }
+
+    // Always require both resume and JD
     if (!jobDescription.trim()) {
       toast({
         variant: "destructive",
@@ -99,7 +173,7 @@ Salary: $120,000 - $160,000`);
       return;
     }
 
-    if (!resumeFile && !user.resumeUrl) {
+    if (!resumeFile && !resumeData?.resumeUrl) {
       toast({
         variant: "destructive",
         title: "Resume Required",
@@ -110,10 +184,15 @@ Salary: $120,000 - $160,000`);
 
     setIsAnalyzing(true);
 
-    // Simulate API call with 2-second delay
-    setTimeout(() => {
+    try {
+      // For now, we'll use mock data since the analysis endpoint isn't implemented yet
+      // In the future, this would call: await consolidatedAPI.analyzeResume(currentUser, uploadedFile?.fileId, jobDescription);
+      
+      // Simulate API call with 2-second delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       setAnalysisResult(resumeAnalysisData.analysis);
-      setIsAnalyzing(false);
+      
       toast({
         title: "Analysis Complete!",
         description: fromFullMock ? "Moving to next stage..." : "Your resume analysis is ready."
@@ -134,13 +213,25 @@ Salary: $120,000 - $160,000`);
           });
         }, 3000);
       }
-    }, 2000);
+    } catch (error: any) {
+      console.error('Analysis failed:', error);
+      toast({
+        variant: "destructive",
+        title: "Analysis Failed",
+        description: error.message || "Failed to analyze resume. Please try again."
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   return (
     <Layout 
-      isAuthenticated={true} 
-      user={{ fullName: user.fullName, profilePicture: user.profilePicture }}
+      isAuthenticated={!!currentUser} 
+      user={{ 
+        fullName: userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : currentUser?.displayName || 'User', 
+        profilePicture: userProfile?.profileImageUrl || currentUser?.photoURL 
+      }}
     >
       <div className="container mx-auto px-6 py-8">
         <div className="max-w-7xl mx-auto">
@@ -183,28 +274,39 @@ Salary: $120,000 - $160,000`);
                 {/* Resume Upload */}
                 <div>
                   <h3 className="font-semibold mb-3">Resume</h3>
-                  {user.resumeUrl || resumeFile ? (
+                  {resumeData?.resumeUrl || resumeFile || uploadedFile ? (
                     <div className="flex items-center gap-4 p-4 border rounded-lg">
                       <FileText className="w-8 h-8 text-primary" />
                       <div className="flex-1">
                         <p className="font-medium">
-                          {resumeFile ? resumeFile.name : `${user.fullName.replace(' ', '-').toLowerCase()}-resume.pdf`}
+                          {resumeFile ? resumeFile.name : 
+                           uploadedFile ? uploadedFile.fileName :
+                           `${userProfile?.firstName || 'user'}-resume.pdf`}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {resumeFile ? `${(resumeFile.size / 1024 / 1024).toFixed(2)} MB` : "From profile"}
+                          {resumeFile ? `${(resumeFile.size / 1024 / 1024).toFixed(2)} MB` : 
+                           uploadedFile ? `${(uploadedFile.fileSize / 1024 / 1024).toFixed(2)} MB` :
+                           "From profile"}
                         </p>
+                        {isUploading && (
+                          <div className="flex items-center gap-2 mt-2">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span className="text-xs text-muted-foreground">Uploading...</span>
+                          </div>
+                        )}
                       </div>
-                      {!resumeFile && (
+                      {!resumeFile && !uploadedFile && (
                         <label htmlFor="resume-upload">
-                          <Button variant="outline" size="sm" className="cursor-pointer">
+                          <Button variant="outline" size="sm" className="cursor-pointer" disabled={isUploading}>
                             Change
                           </Button>
                           <input
                             id="resume-upload"
                             type="file"
-                            accept=".pdf,.doc,.docx,.txt"
+                            accept=".pdf"
                             onChange={handleFileUpload}
                             className="hidden"
+                            disabled={isUploading}
                           />
                         </label>
                       )}
@@ -213,16 +315,19 @@ Salary: $120,000 - $160,000`);
                     <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
                       <input
                         type="file"
-                        accept=".pdf,.doc,.docx,.txt"
+                        accept=".pdf"
                         onChange={handleFileUpload}
                         className="hidden"
                         id="resume-upload"
+                        disabled={isUploading}
                       />
-                      <label htmlFor="resume-upload" className="cursor-pointer">
+                      <label htmlFor="resume-upload" className={`cursor-pointer ${isUploading ? 'opacity-50' : ''}`}>
                         <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                        <p className="font-medium">Upload Resume</p>
+                        <p className="font-medium">
+                          {isUploading ? 'Uploading...' : 'Upload Resume'}
+                        </p>
                         <p className="text-sm text-muted-foreground">
-                          PDF, DOC, DOCX, TXT (Max 5MB)
+                          PDF only (Max 5MB)
                         </p>
                       </label>
                     </div>
@@ -246,7 +351,7 @@ Salary: $120,000 - $160,000`);
                 {/* Analyze Button */}
                 <Button 
                   onClick={handleAnalyze} 
-                  disabled={isAnalyzing}
+                  disabled={isAnalyzing || isUploading || !currentUser}
                   className="w-full gradient-primary"
                   size="lg"
                 >
@@ -255,6 +360,13 @@ Salary: $120,000 - $160,000`);
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                       Analyzing Resume...
                     </>
+                  ) : isUploading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Uploading File...
+                    </>
+                  ) : !currentUser ? (
+                    "Please Log In"
                   ) : (
                     "Analyze Resume Match"
                   )}

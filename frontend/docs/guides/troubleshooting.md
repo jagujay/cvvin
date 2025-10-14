@@ -85,15 +85,15 @@ Use the test script or test manually:
 
 ```bash
 # Test health check
-curl http://localhost:3001/health
+curl http://localhost:3000/health
 
 # Test send OTP
-curl -X POST http://localhost:3001/api/send-otp \
+curl -X POST http://localhost:3000/api/send-otp \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","type":"verification"}'
 
 # Test verify OTP
-curl -X POST http://localhost:3001/api/verify-otp \
+curl -X POST http://localhost:3000/api/verify-otp \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","otp":"123456","type":"verification"}'
 ```
@@ -129,8 +129,8 @@ curl -X POST http://localhost:3001/api/verify-otp \
 ### Port Already in Use
 
 ```bash
-# Kill process on port 3001
-npx kill-port 3001
+# Kill process on port 3000
+npx kill-port 3000
 
 # Or change port in ../backend/.env
 PORT=3002
@@ -157,14 +157,14 @@ The system uses in-memory storage. If you restart the backend:
 Make sure `.env.local` is properly configured:
 
 ```env
-VITE_API_BASE_URL=http://localhost:3001
+VITE_API_BASE_URL=http://localhost:3000
 VITE_FIREBASE_API_KEY=your_firebase_key
 # ... other Firebase config
 ```
 
 ### Network Errors
 
-1. Check if backend is running on port 3001
+1. Check if backend is running on port 3000
 2. Verify CORS configuration
 3. Check browser console for errors
 4. Test API endpoints directly

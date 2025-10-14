@@ -108,7 +108,7 @@ npm run dev
 
 5. **Access the application**
    - Frontend: http://localhost:8080
-   - Backend: http://localhost:3001
+   - Backend: http://localhost:3000
 
 For detailed setup instructions, see the [documentation](docs/README.md).
 

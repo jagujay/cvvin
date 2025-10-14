@@ -107,7 +107,7 @@ cvvin-platform/
 **Development Commands:**
 - `npm run dev` - Start both frontend and backend
 - `npm run dev:frontend` - Frontend only (port 8080)
-- `npm run dev:backend` - Backend only (port 3001)
+- `npm run dev:backend` - Backend only (port 3000)
 
 ## 📞 Support
 

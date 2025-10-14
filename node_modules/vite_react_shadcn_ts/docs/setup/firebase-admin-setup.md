@@ -46,7 +46,7 @@ From the downloaded JSON file, extract these values:
    MAIL_SERVER=smtp.gmail.com
 
    # Server Configuration
-   PORT=3001
+   PORT=3000
    NODE_ENV=development
 
    # CORS Configuration
@@ -74,7 +74,7 @@ npm install
 
 2. Test the password reset endpoint:
    ```bash
-   curl -X POST http://localhost:3001/api/reset-password \
+   curl -X POST http://localhost:3000/api/reset-password \
      -H "Content-Type: application/json" \
      -d '{"email":"test@example.com","newPassword":"newpassword123"}'
    ```

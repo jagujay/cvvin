@@ -35,7 +35,7 @@ This guide will help you set up custom OTP email sending using your Gmail SMTP c
    MAIL_SERVER=smtp.gmail.com
 
    # Server Configuration
-   PORT=3001
+   PORT=3000
    NODE_ENV=development
 
    # CORS Configuration
@@ -61,7 +61,7 @@ This guide will help you set up custom OTP email sending using your Gmail SMTP c
    VITE_FIREBASE_APP_MEASUREMENT_ID="G-5T38M0TH62"
 
    # Backend API Configuration
-   VITE_API_BASE_URL=http://localhost:3001
+   VITE_API_BASE_URL=http://localhost:3000
    ```
 
 ## Step 4: Install Dependencies
@@ -139,7 +139,7 @@ The custom OTP emails include:
 
 ## API Endpoints
 
-### Backend API (Port 3001)
+### Backend API (Port 3000)
 
 - `GET /health` - Health check
 - `POST /api/send-otp` - Send OTP email
@@ -149,7 +149,7 @@ The custom OTP emails include:
 
 ```javascript
 // Send OTP
-const response = await fetch('http://localhost:3001/api/send-otp', {
+const response = await fetch('http://localhost:3000/api/send-otp', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -159,7 +159,7 @@ const response = await fetch('http://localhost:3001/api/send-otp', {
 });
 
 // Verify OTP
-const response = await fetch('http://localhost:3001/api/verify-otp', {
+const response = await fetch('http://localhost:3000/api/verify-otp', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -190,7 +190,7 @@ const response = await fetch('http://localhost:3001/api/verify-otp', {
 
 4. **"CORS error"**
    - Ensure frontend URL is correct in ../backend/.env
-   - Check that backend server is running on port 3001
+   - Check that backend server is running on port 3000
 
 ### Debug Mode
 

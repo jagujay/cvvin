@@ -26,6 +26,16 @@ All project documentation is organized in the [`frontend/docs/`](frontend/docs/)
 - [Troubleshooting](frontend/docs/guides/troubleshooting.md) - Common issues and solutions
 
 ### 🏗️ Architecture
+
+CVVIN follows a simplified, modern architecture:
+
+- **Frontend**: React + TypeScript + Vite (Port 8080)
+- **Backend**: Node.js + Express + PostgreSQL (Port 3000)  
+- **Authentication**: Firebase Auth + Admin SDK
+- **Database**: PostgreSQL with comprehensive schema
+- **AI Integration**: Ollama for local LLM processing (future)
+
+### 📖 Documentation
 - [Full Mock Flow](frontend/docs/architecture/full-mock-flow.md) - Interview system architecture
 - [Phase 1 Summary](frontend/docs/architecture/phase1-summary.md) - Frontend completion overview
 

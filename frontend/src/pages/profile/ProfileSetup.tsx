@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,21 +8,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, Plus, X } from "lucide-react";
+import { Upload, Plus, X, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/layout/Layout";
+import { useAuth } from "@/contexts/AuthContext";
+import { consolidatedAPI } from "@/services/consolidatedAPI";
 import skillsData from "@/mock/skills.json";
 
 const ProfileSetup = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { currentUser } = useAuth();
   const demoUserType = location.state?.demoUserType || 'new';
   
   const [formData, setFormData] = useState({
     profilePicture: "",
-    fullName: "",
-    email: "john.doe@example.com", // Pre-filled from signup
+    profileImageFile: null as File | null,
+    firstName: "",
+    lastName: "",
+    email: currentUser?.email || "",
     countryCode: "+1",
     phoneNumber: "",
     qualification: "",
@@ -42,6 +47,38 @@ const ProfileSetup = () => {
   const [roleSuggestions, setRoleSuggestions] = useState<string[]>([]);
   const [showSkillSuggestions, setShowSkillSuggestions] = useState(false);
   const [showRoleSuggestions, setShowRoleSuggestions] = useState(false);
+
+  // Load existing user data if available
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (!currentUser) return;
+      
+      try {
+        // First, sync the user to ensure they exist in the database
+        await consolidatedAPI.syncUser(currentUser);
+        
+        // Then try to load existing profile
+        const profile = await consolidatedAPI.getUserProfile(currentUser);
+        if (profile) {
+          setFormData(prev => ({
+            ...prev,
+            firstName: profile.firstName || "",
+            lastName: profile.lastName || "",
+            email: profile.email,
+            phoneNumber: profile.phone || "",
+            profilePicture: profile.profileImageUrl || "",
+            skills: profile.profile?.skills || [],
+            interestedRoles: profile.preferences?.targetRoles || []
+          }));
+        }
+      } catch (error) {
+        // Profile doesn't exist yet, that's okay for new users
+        console.log('No existing profile found, starting fresh');
+      }
+    };
+
+    loadUserData();
+  }, [currentUser]);
 
   const handleSkillInputChange = (value: string) => {
     setNewSkill(value);
@@ -116,16 +153,26 @@ const ProfileSetup = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!currentUser) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Required",
+        description: "Please log in to complete your profile."
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     // Validation
-    if (!formData.fullName) {
+    if (!formData.firstName || !formData.lastName) {
       toast({
         variant: "destructive",
         title: "Name Required",
-        description: "Please enter your full name."
+        description: "Please enter both first name and last name."
       });
       setIsLoading(false);
       return;
@@ -161,15 +208,61 @@ const ProfileSetup = () => {
       return;
     }
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Upload profile image first if provided
+      let profileImageUrl = formData.profilePicture && formData.profilePicture !== "" ? formData.profilePicture : null;
+      if (formData.profileImageFile) {
+        const imageUploadResult = await consolidatedAPI.uploadProfileImage(currentUser, formData.profileImageFile);
+        profileImageUrl = imageUploadResult.imageUrl;
+      }
+
+      // Upload resume file first
+      let resumeUrl = "";
+      if (formData.resume) {
+        const uploadResult = await consolidatedAPI.uploadFile(currentUser, formData.resume);
+        resumeUrl = uploadResult.fileId; // Use fileId as reference
+      }
+
+      // Prepare profile data
+      const profileData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phoneNumber ? `${formData.countryCode}${formData.phoneNumber}` : null,
+        profileImageUrl: profileImageUrl,
+        resumeUrl,
+        skills: formData.skills,
+        experienceYears: null, // Could be calculated from education
+        education: formData.college ? [{
+          degree: formData.qualification === 'other' ? formData.qualificationOther : formData.qualification,
+          institution: formData.college,
+          startDate: formData.yearOfPassing ? `${formData.yearOfPassing}-01-01` : null,
+          endDate: formData.yearOfPassing ? `${formData.yearOfPassing}-12-31` : null,
+          gpa: null
+        }] : [],
+        certifications: [],
+        languages: [],
+        targetRoles: formData.interestedRoles
+      };
+
+      // Update user profile
+      await consolidatedAPI.updateUserProfile(currentUser, profileData);
+
       toast({
         title: "Profile Completed!",
         description: "Welcome to CVVIN! Your profile has been set up successfully."
       });
+      
       navigate("/dashboard", { state: { demoUserType: 'returning' } });
+    } catch (error: any) {
+      console.error('Profile setup failed:', error);
+      toast({
+        variant: "destructive",
+        title: "Profile Setup Failed",
+        description: error.message || "Failed to save your profile. Please try again."
+      });
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleSkip = () => {
@@ -177,7 +270,13 @@ const ProfileSetup = () => {
   };
 
   return (
-    <Layout isAuthenticated={true} user={{ fullName: "User" }}>
+    <Layout 
+      isAuthenticated={!!currentUser} 
+      user={{ 
+        fullName: `${formData.firstName} ${formData.lastName}` || currentUser?.displayName || "User", 
+        profilePicture: currentUser?.photoURL 
+      }}
+    >
       <div className="container mx-auto px-6 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-between items-center mb-8">
@@ -228,7 +327,8 @@ const ProfileSetup = () => {
                             const reader = new FileReader();
                             reader.onload = (e) => setFormData({ 
                               ...formData, 
-                              profilePicture: e.target?.result as string 
+                              profilePicture: e.target?.result as string,
+                              profileImageFile: file
                             });
                             reader.readAsDataURL(file);
                           }
@@ -241,12 +341,22 @@ const ProfileSetup = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="fullName">Full Name *</Label>
+                    <Label htmlFor="firstName">First Name *</Label>
                     <Input
-                      id="fullName"
-                      value={formData.fullName}
-                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                      placeholder="Enter your full name"
+                      id="firstName"
+                      value={formData.firstName}
+                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                      placeholder="Enter your first name"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="lastName">Last Name *</Label>
+                    <Input
+                      id="lastName"
+                      value={formData.lastName}
+                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                      placeholder="Enter your last name"
                       className="mt-1"
                     />
                   </div>
@@ -605,8 +715,17 @@ const ProfileSetup = () => {
               <Button type="button" variant="ghost" onClick={handleSkip}>
                 Skip for now
               </Button>
-              <Button type="submit" disabled={isLoading} className="px-8">
-                {isLoading ? "Saving..." : "Save & Continue"}
+              <Button type="submit" disabled={isLoading || !currentUser} className="px-8">
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : !currentUser ? (
+                  "Please Log In"
+                ) : (
+                  "Save & Continue"
+                )}
               </Button>
             </div>
           </form>

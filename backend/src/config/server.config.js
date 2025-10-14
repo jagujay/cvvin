@@ -2,7 +2,7 @@
  * Server configuration constants
  */
 const SERVER_CONFIG = {
-  PORT: process.env.PORT || 3001,
+  PORT: process.env.PORT || 3000,
   NODE_ENV: process.env.NODE_ENV || 'development',
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:8080',
   

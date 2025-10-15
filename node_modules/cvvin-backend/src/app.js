@@ -14,6 +14,8 @@ const { logRequest, sanitizeBody } = require('./middleware/validation');
 // Import routes
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
+const fileRoutes = require('./routes/file.routes');
+const imageRoutes = require('./routes/image.routes');
 const healthRoutes = require('./routes/health.routes');
 
 /**
@@ -36,13 +38,12 @@ const createApp = () => {
   app.use(logRequest);
   app.use(sanitizeBody);
 
-  // Serve uploaded files statically
-  app.use('/uploads', express.static('uploads'));
-
   // Routes
   app.use('/health', healthRoutes);
   app.use('/api', authRoutes);
   app.use('/api/users', userRoutes);
+  app.use('/api/files', fileRoutes);
+  app.use('/api/images', imageRoutes);
 
   // Error handling middleware (must be last)
   app.use(notFoundHandler);

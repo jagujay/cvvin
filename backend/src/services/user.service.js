@@ -135,6 +135,7 @@ class UserProfileService {
           up.education,
           up.certifications,
           up.languages,
+          up.target_roles,
           up.created_at as profile_created_at,
           up.updated_at as profile_updated_at
         FROM users u
@@ -171,7 +172,7 @@ class UserProfileService {
           SET first_name = COALESCE($1, first_name),
               last_name = COALESCE($2, last_name),
               phone = COALESCE($3, phone),
-              profile_image_url = CASE WHEN $4 IS NOT NULL THEN $4 ELSE profile_image_url END,
+              profile_image_url = COALESCE($4, profile_image_url),
               preferences = COALESCE($5, preferences),
               updated_at = CURRENT_TIMESTAMP
           WHERE id = $6
@@ -187,7 +188,7 @@ class UserProfileService {
           profileData.firstName || null,
           profileData.lastName || null,
           profileData.phone || null,
-          hasImageUpdate ? profileData.profileImageUrl : null,
+          profileData.profileImageUrl || null,
           Object.keys(preferences).length > 0 ? JSON.stringify(preferences) : null,
           userId
         ]);
@@ -206,8 +207,9 @@ class UserProfileService {
               education = COALESCE($3, education),
               certifications = COALESCE($4, certifications),
               languages = COALESCE($5, languages),
+              target_roles = COALESCE($6, target_roles),
               updated_at = CURRENT_TIMESTAMP
-          WHERE user_id = $6
+          WHERE user_id = $7
         `;
         
         await client.query(profileUpdateQuery, [
@@ -216,6 +218,7 @@ class UserProfileService {
           profileData.education ? JSON.stringify(profileData.education) : null,
           profileData.certifications ? JSON.stringify(profileData.certifications) : null,
           profileData.languages ? JSON.stringify(profileData.languages) : null,
+          profileData.targetRoles ? JSON.stringify(profileData.targetRoles) : null,
           userId
         ]);
       } else {
@@ -223,8 +226,8 @@ class UserProfileService {
         const profileInsertQuery = `
           INSERT INTO user_profiles (
             user_id, skills, experience_years, education, 
-            certifications, languages, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            certifications, languages, target_roles, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         `;
         
         await client.query(profileInsertQuery, [
@@ -233,7 +236,8 @@ class UserProfileService {
           profileData.experienceYears || null,
           profileData.education ? JSON.stringify(profileData.education) : JSON.stringify([]),
           profileData.certifications ? JSON.stringify(profileData.certifications) : JSON.stringify([]),
-          profileData.languages ? JSON.stringify(profileData.languages) : JSON.stringify([])
+          profileData.languages ? JSON.stringify(profileData.languages) : JSON.stringify([]),
+          profileData.targetRoles ? JSON.stringify(profileData.targetRoles) : JSON.stringify([])
         ]);
       }
       
@@ -453,30 +457,42 @@ class UserProfileService {
   /**
    * Get all user's files
    * @param {string} userId - User ID
+   * @param {string} fileType - Optional file type filter
    * @returns {Promise<Array>} User's files
    */
-  async getUserFiles(userId) {
+  async getUserFiles(userId, fileType = null) {
     try {
-      const query = `
+      let sqlQuery = `
         SELECT 
-          id, file_name, file_path, file_size, mime_type, 
-          storage_method, created_at, updated_at
+          id, file_name, file_type, file_path, file_size, mime_type, 
+          storage_method, upload_date, is_processed, processing_status, checksum
         FROM files 
-        WHERE user_id = $1 
-        ORDER BY created_at DESC
+        WHERE user_id = $1
       `;
       
-      const result = await query(query, [userId]);
+      const params = [userId];
+      
+      if (fileType) {
+        sqlQuery += ` AND file_type = $2`;
+        params.push(fileType);
+      }
+      
+      sqlQuery += ` ORDER BY upload_date DESC`;
+      
+      const result = await query(sqlQuery, params);
       
       return result.rows.map(file => ({
         id: file.id,
         fileName: file.file_name,
+        fileType: file.file_type,
         filePath: file.file_path,
         fileSize: file.file_size,
         mimeType: file.mime_type,
         storageMethod: file.storage_method,
-        createdAt: file.created_at,
-        updatedAt: file.updated_at
+        uploadDate: file.upload_date,
+        isProcessed: file.is_processed,
+        processingStatus: file.processing_status,
+        checksum: file.checksum
       }));
       
     } catch (error) {

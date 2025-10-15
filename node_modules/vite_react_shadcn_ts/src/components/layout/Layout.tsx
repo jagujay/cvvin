@@ -1,5 +1,7 @@
 import { ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { SecureAvatar } from "@/components/ui/secure-avatar";
+import { extractFileIdFromUrl, generateAvatarFallback } from "@/lib/image-utils";
 import Navigation from "./Navigation";
 import Footer from "./Footer";
 

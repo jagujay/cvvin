@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SecureAvatar } from "@/components/ui/secure-avatar";
+import { extractFileIdFromUrl } from "@/lib/image-utils";
 import { Upload, Plus, X, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/layout/Layout";
@@ -57,19 +59,63 @@ const ProfileSetup = () => {
         // First, sync the user to ensure they exist in the database
         await consolidatedAPI.syncUser(currentUser);
         
-        // Then try to load existing profile
-        const profile = await consolidatedAPI.getUserProfile(currentUser);
+        // Load profile and file data in parallel
+        const [profile, profileImageFile, resumeFile] = await Promise.all([
+          consolidatedAPI.getUserProfile(currentUser),
+          consolidatedAPI.getProfileImageFile(currentUser),
+          consolidatedAPI.getResumeFile(currentUser)
+        ]);
+        
         if (profile) {
+          // Parse phone number if it exists
+          let phoneNumber = "";
+          let countryCode = "+1";
+          if (profile.phone) {
+            const phoneMatch = profile.phone.match(/^(\+\d{1,3})(\d+)$/);
+            if (phoneMatch) {
+              countryCode = phoneMatch[1];
+              phoneNumber = phoneMatch[2];
+            } else {
+              phoneNumber = profile.phone;
+            }
+          }
+
+          // Parse education data
+          let qualification = "";
+          let qualificationOther = "";
+          let college = "";
+          let yearOfPassing = "";
+          
+          if (profile.profile?.education && profile.profile.education.length > 0) {
+            const edu = profile.profile.education[0];
+            qualification = edu.degree || "";
+            college = edu.institution || "";
+            if (edu.endDate) {
+              yearOfPassing = new Date(edu.endDate).getFullYear().toString();
+            }
+          }
+
           setFormData(prev => ({
             ...prev,
             firstName: profile.firstName || "",
             lastName: profile.lastName || "",
             email: profile.email,
-            phoneNumber: profile.phone || "",
-            profilePicture: profile.profileImageUrl || "",
+            countryCode,
+            phoneNumber,
+            profilePicture: profileImageFile ? `/uploads/users/${currentUser.uid}/${profileImageFile.fileName}` : profile.profileImageUrl || "",
+            qualification,
+            qualificationOther: qualification === 'other' ? qualification : '',
+            college,
+            yearOfPassing,
             skills: profile.profile?.skills || [],
             interestedRoles: profile.preferences?.targetRoles || []
           }));
+
+          // Set file references if they exist
+          if (resumeFile) {
+            // Note: We can't set the actual file object, but we can show that a resume exists
+            console.log('Resume file exists:', resumeFile.fileName);
+          }
         }
       } catch (error) {
         // Profile doesn't exist yet, that's okay for new users
@@ -305,12 +351,18 @@ const ProfileSetup = () => {
               <CardContent className="space-y-4">
                 {/* Profile Picture */}
                 <div className="flex items-center space-x-4">
-                  <Avatar className="w-20 h-20">
-                    <AvatarImage src={formData.profilePicture} />
-                    <AvatarFallback className="bg-muted">
+                  <SecureAvatar 
+                    className="w-20 h-20"
+                    fileId={formData.profilePicture ? extractFileIdFromUrl(formData.profilePicture) : undefined}
+                    imageUrl={formData.profilePicture}
+                    fallbackText=""
+                    size={80}
+                    quality={85}
+                  >
+                    <div className="w-full h-full bg-muted flex items-center justify-center">
                       <Upload className="w-8 h-8 text-muted-foreground" />
-                    </AvatarFallback>
-                  </Avatar>
+                    </div>
+                  </SecureAvatar>
                   <div>
                     <Label htmlFor="profile-picture" className="block text-sm font-medium mb-2">
                       Profile Picture

@@ -21,6 +21,8 @@ import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/layout/Layout";
 import { useAuth } from "@/contexts/AuthContext";
 import { consolidatedAPI, FileUploadResponse, UserProfile, ResumeData } from "@/services/consolidatedAPI";
+import { SecureAvatar } from "@/components/ui/secure-avatar";
+import { extractFileIdFromUrl, generateAvatarFallback } from "@/lib/image-utils";
 import resumeAnalysisData from "@/mock/resumeAnalysis.json";
 
 const ResumeAnalysis = () => {

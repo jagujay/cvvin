@@ -12,6 +12,7 @@ import VerifyResetCode from "./pages/auth/VerifyResetCode";
 import SetNewPassword from "./pages/auth/SetNewPassword";
 import ProfileSetup from "./pages/profile/ProfileSetup";
 import Profile from "./pages/profile/Profile";
+import ProfileEnhanced from "./pages/profile/ProfileEnhanced";
 import Dashboard from "./pages/Dashboard";
 import ResumeAnalysis from "./pages/ResumeAnalysis";
 import PreInterviewSetup from "./pages/interview/PreInterviewSetup";
@@ -23,6 +24,7 @@ import HRLanding from "./pages/hr/HRLanding";
 import HRSession from "./pages/hr/HRSession";
 import FeedbackList from "./pages/feedback/FeedbackList";
 import FeedbackDetail from "./pages/feedback/FeedbackDetail";
+import ImageDemo from "./pages/ImageDemo";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,7 +44,7 @@ const App = () => (
             <Route path="/auth/verify-reset-code" element={<VerifyResetCode />} />
             <Route path="/auth/set-new-password" element={<SetNewPassword />} />
             <Route path="/profile-setup" element={<ProfileSetup />} />
-            <Route path="/profile" element={<Profile />} />
+            <Route path="/profile" element={<ProfileEnhanced />} />
             <Route path="/profile/edit" element={<ProfileSetup />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/resume-analysis" element={<ResumeAnalysis />} />
@@ -55,6 +57,7 @@ const App = () => (
             <Route path="/hr-interview/session" element={<HRSession />} />
             <Route path="/feedback" element={<FeedbackList />} />
             <Route path="/feedback/:sessionId" element={<FeedbackDetail />} />
+            <Route path="/image-demo" element={<ImageDemo />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

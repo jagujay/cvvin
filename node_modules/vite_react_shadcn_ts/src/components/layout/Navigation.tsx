@@ -1,6 +1,8 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SecureAvatar } from "@/components/ui/secure-avatar";
+import { extractFileIdFromUrl, generateAvatarFallback } from "@/lib/image-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,16 +56,14 @@ const Navigation = ({ isAuthenticated = false, user }: NavigationProps) => {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={user.profilePicture} alt={user.fullName} />
-                      <AvatarFallback className="bg-accent text-accent-foreground">
-                        {user.fullName
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")
-                          .toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <SecureAvatar 
+                      className="h-10 w-10"
+                      fileId={user.profilePicture ? extractFileIdFromUrl(user.profilePicture) : undefined}
+                      imageUrl={user.profilePicture}
+                      fallbackText={generateAvatarFallback(user.fullName)}
+                      size={40}
+                      quality={85}
+                    />
                     {/* Profile completion badge */}
                     {user.isProfileComplete === false && (
                       <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center">

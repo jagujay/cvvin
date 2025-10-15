@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,9 +15,11 @@ import {
   Target,
   AlertCircle,
   CheckCircle2,
-  HelpCircle
+  HelpCircle,
+  Loader2
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { consolidatedAPI } from "@/services/consolidatedAPI";
 import Layout from "@/components/layout/Layout";
 import sessionsData from "@/mock/sessions.json";
 import Walkthrough from "@/components/ui/walkthrough";
@@ -24,16 +27,49 @@ import { useWalkthrough, WalkthroughStep } from "@/hooks/use-walkthrough";
 
 const Dashboard = () => {
   const { currentUser } = useAuth();
+  const [profileCompletion, setProfileCompletion] = useState<{
+    isComplete: boolean;
+    percentage: number;
+    missingFields: string[];
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   // For now, we'll use mock data. In a real implementation, this would come from Firestore
   const sessions = sessionsData.recentSessions;
   const stats = sessionsData.stats;
   const hasActivity = sessions.length > 0;
   
-  // Mock user data - in real implementation, this would come from Firestore
+  // Load profile completion status
+  useEffect(() => {
+    const loadProfileStatus = async () => {
+      if (!currentUser) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const completion = await consolidatedAPI.getProfileCompletionStatus(currentUser);
+        setProfileCompletion(completion);
+      } catch (error) {
+        console.error('Failed to load profile completion status:', error);
+        // Set default values if API fails
+        setProfileCompletion({
+          isComplete: false,
+          percentage: 0,
+          missingFields: ['profile', 'resume', 'skills']
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProfileStatus();
+  }, [currentUser]);
+  
+  // User data with real profile completion status
   const user = {
     fullName: currentUser?.displayName || "User",
-    isProfileComplete: false // This would come from Firestore
+    isProfileComplete: profileCompletion?.isComplete || false
   };
 
   // Walkthrough steps for new users - simplified
@@ -148,20 +184,37 @@ const Dashboard = () => {
           </div>
 
           {/* Profile Completion Banner */}
-          {!user.isProfileComplete && (
+          {!user.isProfileComplete && !isLoading && (
             <Card className="mb-8 border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950" data-walkthrough="profile-banner">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <AlertCircle className="w-5 h-5 text-orange-600" />
                   <div className="flex-1">
-                    <p className="font-medium">Complete your profile to unlock personalized features</p>
-                    <p className="text-sm text-muted-foreground">
-                      Add your skills, education, and resume for better interview recommendations
+                    <p className="font-medium">
+                      Complete your profile ({profileCompletion?.percentage || 0}%) to unlock personalized features
                     </p>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Missing: {profileCompletion?.missingFields?.join(', ') || 'profile information'}
+                    </p>
+                    {profileCompletion && (
+                      <Progress value={profileCompletion.percentage} className="w-full max-w-xs" />
+                    )}
                   </div>
                   <Button asChild variant="outline" size="sm">
                     <Link to="/profile-setup">Complete Profile</Link>
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Loading state for profile completion */}
+          {isLoading && (
+            <Card className="mb-8">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <p className="text-muted-foreground">Loading profile status...</p>
                 </div>
               </CardContent>
             </Card>

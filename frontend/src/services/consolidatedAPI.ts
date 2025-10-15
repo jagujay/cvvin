@@ -38,6 +38,10 @@ export interface UserProfile {
     createdAt?: string;
     updatedAt?: string;
   };
+  // Profile completion status
+  isProfileComplete?: boolean;
+  profileCompletionPercentage?: number;
+  missingFields?: string[];
 }
 
 export interface ResumeData {
@@ -155,14 +159,59 @@ class ConsolidatedAPI {
     return this.handleResponse<FileUploadResponse>(response);
   }
 
-  async getUserFiles(user: User): Promise<any[]> {
+  async getUserFiles(user: User, fileType?: string): Promise<any[]> {
     const headers = await this.getAuthHeaders(user);
-    const response = await fetch(`${BACKEND_BASE_URL}/api/users/files`, {
+    let url = `${BACKEND_BASE_URL}/api/users/files`;
+    if (fileType) {
+      url += `?type=${fileType}`;
+    }
+    
+    const response = await fetch(url, {
       method: 'GET',
       headers,
     });
     const result = await this.handleResponse<{ success: boolean; data: any[] }>(response);
     return result.data;
+  }
+
+  // Check profile completion status
+  async getProfileCompletionStatus(user: User): Promise<{
+    isComplete: boolean;
+    percentage: number;
+    missingFields: string[];
+  }> {
+    const headers = await this.getAuthHeaders(user);
+    const response = await fetch(`${BACKEND_BASE_URL}/api/users/profile/completion`, {
+      method: 'GET',
+      headers,
+    });
+    const result = await this.handleResponse<{ 
+      success: boolean; 
+      data: { isComplete: boolean; percentage: number; missingFields: string[] } 
+    }>(response);
+    return result.data;
+  }
+
+  // Get profile image file info
+  async getProfileImageFile(user: User): Promise<any | null> {
+    try {
+      const files = await this.getUserFiles(user, 'profile_image');
+      return files.length > 0 ? files[0] : null;
+    } catch (error) {
+      console.error('Failed to get profile image file:', error);
+      return null;
+    }
+  }
+
+  // Get resume file info
+  async getResumeFile(user: User): Promise<any | null> {
+    try {
+      const files = await this.getUserFiles(user, 'resume_pdf');
+      return files.length > 0 ? files[0] : null;
+    } catch (error) {
+      console.error('Failed to get resume file:', error);
+      return null;
+    }
   }
 
   async getFileInfo(user: User, fileId: string): Promise<any> {
@@ -177,7 +226,7 @@ class ConsolidatedAPI {
 
   async downloadFile(user: User, fileId: string): Promise<Blob> {
     const headers = await this.getAuthHeaders(user);
-    const response = await fetch(`${BACKEND_BASE_URL}/api/users/files/${fileId}/download`, {
+    const response = await fetch(`${BACKEND_BASE_URL}/api/files/${fileId}/download`, {
       method: 'GET',
       headers,
     });
@@ -188,6 +237,32 @@ class ConsolidatedAPI {
     }
     
     return response.blob();
+  }
+
+  async getFileUrl(user: User, fileId: string): Promise<{ downloadUrl: string; viewUrl: string }> {
+    const headers = await this.getAuthHeaders(user);
+    const response = await fetch(`${BACKEND_BASE_URL}/api/files/${fileId}/url`, {
+      method: 'GET',
+      headers,
+    });
+    const result = await this.handleResponse<{ success: boolean; data: { downloadUrl: string; viewUrl: string } }>(response);
+    return result.data;
+  }
+
+  async viewFile(user: User, fileId: string): Promise<string> {
+    const headers = await this.getAuthHeaders(user);
+    const response = await fetch(`${BACKEND_BASE_URL}/api/files/${fileId}/view`, {
+      method: 'GET',
+      headers,
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || errorData.message || `HTTP error! status: ${response.status}`);
+    }
+    
+    // Return the URL for viewing
+    return `${BACKEND_BASE_URL}/api/files/${fileId}/view`;
   }
 
   async deleteFile(user: User, fileId: string): Promise<void> {
@@ -213,6 +288,63 @@ class ConsolidatedAPI {
     });
     
     return this.handleResponse(response);
+  }
+
+  // Image-specific methods
+  async getImageUrl(user: User, fileId: string, options?: {
+    width?: number;
+    height?: number;
+    quality?: number;
+    format?: 'webp' | 'jpeg' | 'png';
+  }): Promise<string> {
+    const headers = await this.getAuthHeaders(user);
+    
+    let url = `${BACKEND_BASE_URL}/api/images/${fileId}`;
+    const params = new URLSearchParams();
+    
+    if (options?.width) params.append('w', options.width.toString());
+    if (options?.height) params.append('h', options.height.toString());
+    if (options?.quality) params.append('q', options.quality.toString());
+    if (options?.format) params.append('format', options.format);
+    
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+    
+    return url;
+  }
+
+  async getImageThumbnail(user: User, fileId: string, size: number = 150): Promise<string> {
+    const headers = await this.getAuthHeaders(user);
+    return `${BACKEND_BASE_URL}/api/images/${fileId}/thumbnail?size=${size}`;
+  }
+
+  async getImageInfo(user: User, fileId: string): Promise<{
+    fileId: string;
+    fileName: string;
+    fileSize: number;
+    mimeType: string;
+    metadata: {
+      width: number;
+      height: number;
+      format: string;
+      channels: number;
+      hasAlpha: boolean;
+    };
+    urls: {
+      original: string;
+      thumbnail: string;
+      resized: (w: number, h: number) => string;
+      optimized: (format: string, quality: number) => string;
+    };
+  }> {
+    const headers = await this.getAuthHeaders(user);
+    const response = await fetch(`${BACKEND_BASE_URL}/api/images/${fileId}/info`, {
+      method: 'GET',
+      headers,
+    });
+    const result = await this.handleResponse<{ success: boolean; data: any }>(response);
+    return result.data;
   }
 
   // Resume Analysis (placeholder for future implementation)

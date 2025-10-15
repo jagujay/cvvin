@@ -3,8 +3,12 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Edit, FileText, Mail, Phone, GraduationCap, Briefcase, Loader2 } from "lucide-react";
+import { SecureAvatar } from "@/components/ui/secure-avatar";
+import SecurePDFViewer from "@/components/ui/secure-pdf-viewer";
+import { extractFileIdFromUrl, generateAvatarFallback } from "@/lib/image-utils";
+import { Edit, FileText, Mail, Phone, GraduationCap, Briefcase, Loader2, Download, Eye } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { useAuth } from "@/contexts/AuthContext";
 import { consolidatedAPI, UserProfile } from "@/services/consolidatedAPI";
@@ -15,6 +19,9 @@ const Profile = () => {
   const { toast } = useToast();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [profileImageFile, setProfileImageFile] = useState<any>(null);
+  const [resumeFile, setResumeFile] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState("overview");
 
   // Load user profile data
   useEffect(() => {
@@ -28,9 +35,18 @@ const Profile = () => {
         // First, sync the user to ensure they exist in the database
         await consolidatedAPI.syncUser(currentUser);
         
-        // Then load the profile
+        // Load the profile
         const profile = await consolidatedAPI.getUserProfile(currentUser);
         setUserProfile(profile);
+
+        // Load file information in parallel
+        const [profileImage, resume] = await Promise.all([
+          consolidatedAPI.getProfileImageFile(currentUser),
+          consolidatedAPI.getResumeFile(currentUser)
+        ]);
+
+        setProfileImageFile(profileImage);
+        setResumeFile(resume);
       } catch (error) {
         console.error('Failed to load user profile:', error);
         toast({
@@ -126,16 +142,14 @@ const Profile = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex items-start space-x-6">
-                  <Avatar className="w-24 h-24">
-                    <AvatarImage src={userProfile.profileImageUrl || currentUser?.photoURL} alt={`${userProfile.firstName} ${userProfile.lastName}`} />
-                    <AvatarFallback className="bg-accent text-accent-foreground text-lg">
-                      {`${userProfile.firstName} ${userProfile.lastName}`
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <SecureAvatar 
+                    className="w-24 h-24"
+                    fileId={userProfile.profileImageUrl ? extractFileIdFromUrl(userProfile.profileImageUrl) : undefined}
+                    imageUrl={userProfile.profileImageUrl || currentUser?.photoURL}
+                    fallbackText={generateAvatarFallback(`${userProfile.firstName} ${userProfile.lastName}`)}
+                    size={96}
+                    quality={90}
+                  />
                   <div className="flex-1 space-y-4">
                     <div>
                       <h2 className="text-2xl font-semibold">{`${userProfile.firstName} ${userProfile.lastName}`}</h2>

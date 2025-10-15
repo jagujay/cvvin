@@ -115,23 +115,29 @@ router.get('/profile',
         success: true,
         data: {
           id: profile.id,
+          firebase_uid: profile.firebase_uid,
           email: profile.email,
           firstName: profile.first_name,
           lastName: profile.last_name,
           phone: profile.phone,
           profileImageUrl: profile.profile_image_url,
-          resumeUrl: profile.resume_url,
-          resumeText: profile.resume_text,
-          skills: profile.skills || [],
-          experienceYears: profile.experience_years,
-          education: profile.education || [],
-          certifications: profile.certifications || [],
-          languages: profile.languages || [],
           isActive: profile.is_active,
           createdAt: profile.created_at,
           updatedAt: profile.updated_at,
-          profileCreatedAt: profile.profile_created_at,
-          profileUpdatedAt: profile.profile_updated_at
+          preferences: {
+            targetRoles: profile.target_roles || []
+          },
+          profile: {
+            resumeUrl: profile.resume_url,
+            resumeText: profile.resume_text,
+            skills: profile.skills || [],
+            experienceYears: profile.experience_years,
+            education: profile.education || [],
+            certifications: profile.certifications || [],
+            languages: profile.languages || [],
+            createdAt: profile.profile_created_at,
+            updatedAt: profile.profile_updated_at
+          }
         }
       });
     } catch (error) {
@@ -207,6 +213,76 @@ router.put('/profile',
       res.status(500).json({
         success: false,
         error: 'Profile update failed',
+        message: error.message
+      });
+    }
+  })
+);
+
+/**
+ * Get profile completion status
+ * GET /api/users/profile/completion
+ */
+router.get('/profile/completion',
+  authMiddleware.authenticate.bind(authMiddleware),
+  authMiddleware.requireActiveUser.bind(authMiddleware),
+  asyncHandler(async (req, res) => {
+    try {
+      const profile = await userService.getUserProfile(req.user.id);
+      
+      if (!profile) {
+        return res.json({
+          success: true,
+          data: {
+            isComplete: false,
+            percentage: 0,
+            missingFields: ['profile', 'resume', 'skills', 'education']
+          }
+        });
+      }
+
+      // Calculate completion percentage
+      const fields = {
+        firstName: profile.first_name,
+        lastName: profile.last_name,
+        email: profile.email,
+        phone: profile.phone,
+        profileImage: profile.profile_image_url,
+        resume: profile.resume_url,
+        skills: profile.skills && profile.skills.length > 0,
+        education: profile.education && profile.education.length > 0,
+        targetRoles: profile.target_roles && profile.target_roles.length > 0
+      };
+
+      const totalFields = Object.keys(fields).length;
+      const completedFields = Object.values(fields).filter(Boolean).length;
+      const percentage = Math.round((completedFields / totalFields) * 100);
+
+      const missingFields = [];
+      if (!fields.firstName) missingFields.push('first name');
+      if (!fields.lastName) missingFields.push('last name');
+      if (!fields.phone) missingFields.push('phone number');
+      if (!fields.profileImage) missingFields.push('profile image');
+      if (!fields.resume) missingFields.push('resume');
+      if (!fields.skills) missingFields.push('skills');
+      if (!fields.education) missingFields.push('education');
+      if (!fields.targetRoles) missingFields.push('target roles');
+
+      const isComplete = percentage >= 80 && missingFields.length <= 2;
+
+      res.json({
+        success: true,
+        data: {
+          isComplete,
+          percentage,
+          missingFields
+        }
+      });
+    } catch (error) {
+      Logger.error('Failed to get profile completion status', error);
+      res.status(500).json({
+        success: false,
+        error: 'Profile completion check failed',
         message: error.message
       });
     }
@@ -315,6 +391,7 @@ router.post('/profile/resume',
  */
 router.get('/files',
   authMiddleware.authenticate.bind(authMiddleware),
+  authMiddleware.requireActiveUser.bind(authMiddleware),
   asyncHandler(async (req, res) => {
     try {
       const { type } = req.query;
@@ -324,15 +401,15 @@ router.get('/files',
         success: true,
         data: files.map(file => ({
           id: file.id,
-          fileName: file.file_name,
-          fileType: file.file_type,
-          fileSize: file.file_size,
-          storageMethod: file.storage_method,
-          mimeType: file.mime_type,
-          uploadDate: file.upload_date,
+          fileName: file.fileName,
+          fileType: file.fileType,
+          fileSize: file.fileSize,
+          storageMethod: file.storageMethod,
+          mimeType: file.mimeType,
+          uploadDate: file.uploadDate,
           checksum: file.checksum,
-          isProcessed: file.is_processed,
-          processingStatus: file.processing_status
+          isProcessed: file.isProcessed,
+          processingStatus: file.processingStatus
         }))
       });
     } catch (error) {
@@ -471,36 +548,6 @@ router.post('/files/upload',
   })
 );
 
-/**
- * GET /api/users/files
- * Get all user's files
- */
-router.get('/files',
-  authMiddleware.authenticate.bind(authMiddleware),
-  authMiddleware.requireActiveUser.bind(authMiddleware),
-  asyncHandler(async (req, res) => {
-    try {
-      const files = await userService.getUserFiles(req.user.id);
-      
-      Logger.info(`Files retrieved for user: ${req.user.email}`, {
-        fileCount: files.length
-      });
-      
-      res.json({
-        success: true,
-        data: files
-      });
-      
-    } catch (error) {
-      Logger.error('Failed to get user files', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to get files',
-        message: error.message
-      });
-    }
-  })
-);
 
 /**
  * GET /api/users/files/:fileId

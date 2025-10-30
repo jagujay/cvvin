@@ -35,16 +35,14 @@ const Profile = () => {
         // First, sync the user to ensure they exist in the database
         await consolidatedAPI.syncUser(currentUser);
         
-        // Load the profile
-        const profile = await consolidatedAPI.getUserProfile(currentUser);
-        setUserProfile(profile);
-
-        // Load file information in parallel
-        const [profileImage, resume] = await Promise.all([
-          consolidatedAPI.getProfileImageFile(currentUser),
-          consolidatedAPI.getResumeFile(currentUser)
+        // Load the profile and file information in parallel
+        const [profile, profileImage, resume] = await Promise.all([
+          consolidatedAPI.getUserProfile(currentUser),
+          consolidatedAPI.getProfileImageFile(currentUser).catch(() => null),
+          consolidatedAPI.getResumeFile(currentUser).catch(() => null)
         ]);
 
+        setUserProfile(profile);
         setProfileImageFile(profileImage);
         setResumeFile(resume);
       } catch (error) {
@@ -144,7 +142,7 @@ const Profile = () => {
                 <div className="flex items-start space-x-6">
                   <SecureAvatar 
                     className="w-24 h-24"
-                    fileId={userProfile.profileImageUrl ? extractFileIdFromUrl(userProfile.profileImageUrl) : undefined}
+                    fileId={profileImageFile?.id}
                     imageUrl={userProfile.profileImageUrl || currentUser?.photoURL}
                     fallbackText={generateAvatarFallback(`${userProfile.firstName} ${userProfile.lastName}`)}
                     size={96}
@@ -263,25 +261,84 @@ const Profile = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {userProfile.profile?.resumeUrl ? (
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-8 h-8 text-primary" />
-                      <div>
-                        <p className="font-medium">Resume.pdf</p>
-                        <p className="text-sm text-muted-foreground">
-                          Last updated: {userProfile.updatedAt ? new Date(userProfile.updatedAt).toLocaleDateString() : 'Unknown'}
-                        </p>
+                {resumeFile || userProfile.profile?.resumeUrl ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                          <FileText className="w-6 h-6 text-red-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{resumeFile?.fileName || 'Resume.pdf'}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {resumeFile?.fileSize ? `${(resumeFile.fileSize / 1024).toFixed(1)} KB` : 'PDF Document'}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Last updated: {userProfile.updatedAt ? new Date(userProfile.updatedAt).toLocaleDateString() : 'Unknown'}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link to="/resume-analysis">
-                        View Resume
-                      </Link>
-                    </Button>
+                    
+                    <div className="flex gap-3">
+                      {resumeFile && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              const fileUrls = await consolidatedAPI.getFileUrl(currentUser!, resumeFile.id);
+                              window.open(fileUrls.viewUrl, '_blank');
+                            } catch (error) {
+                              toast({
+                                variant: "destructive",
+                                title: "View Failed",
+                                description: "Could not open the resume. Please try again."
+                              });
+                            }
+                          }}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Resume
+                        </Button>
+                      )}
+                      
+                      {resumeFile && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              const fileUrls = await consolidatedAPI.getFileUrl(currentUser!, resumeFile.id);
+                              const link = document.createElement('a');
+                              link.href = fileUrls.downloadUrl;
+                              link.download = resumeFile.fileName;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                            } catch (error) {
+                              toast({
+                                variant: "destructive",
+                                title: "Download Failed",
+                                description: "Could not download the resume. Please try again."
+                              });
+                            }
+                          }}
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Download
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ) : (
-                  <p className="text-muted-foreground">No resume uploaded</p>
+                  <div className="text-center py-8">
+                    <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground mb-4">No resume uploaded</p>
+                    <Button asChild>
+                      <Link to="/profile/setup">Upload Resume</Link>
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>

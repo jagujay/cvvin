@@ -19,34 +19,40 @@ class UserProfileService {
       const existingUser = await this.getUserByFirebaseUid(uid);
       
       if (existingUser) {
-        // Update existing user
+        // Update existing user - ONLY update fields that should come from Firebase
+        // Preserve user-entered data (first_name, last_name, phone, profile_image_url)
+        // Only update: email, last_login (and Firebase photo if user doesn't have a profile image)
         const updateQuery = `
           UPDATE users 
-          SET email = $1, 
-              first_name = $2, 
-              last_name = $3, 
-              phone = $4, 
-              profile_image_url = $5, 
+          SET email = $1,
               last_login = CURRENT_TIMESTAMP,
               updated_at = CURRENT_TIMESTAMP
-          WHERE firebase_uid = $6
+          WHERE firebase_uid = $2
           RETURNING *
         `;
         
-        const nameParts = displayName ? displayName.split(' ') : ['', ''];
-        const firstName = nameParts[0] || '';
-        const lastName = nameParts.slice(1).join(' ') || '';
+        // Only update profile_image_url if:
+        // 1. User doesn't have one yet (existingUser.profile_image_url is null)
+        // 2. And Firebase has one (photoURL is not null)
+        let finalUpdateQuery = updateQuery;
+        let queryParams = [email, uid];
         
-        const result = await query(updateQuery, [
-          email,
-          firstName,
-          lastName,
-          phoneNumber || null,
-          photoURL || null,
-          uid
-        ]);
+        if (!existingUser.profile_image_url && photoURL) {
+          finalUpdateQuery = `
+            UPDATE users 
+            SET email = $1,
+                profile_image_url = $2,
+                last_login = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE firebase_uid = $3
+            RETURNING *
+          `;
+          queryParams = [email, photoURL, uid];
+        }
         
-        Logger.info(`User updated: ${email}`);
+        const result = await query(finalUpdateQuery, queryParams);
+        
+        Logger.info(`User synced (preserving user data): ${email}`);
         return result.rows[0];
       } else {
         // Create new user
@@ -162,36 +168,53 @@ class UserProfileService {
     try {
       await client.query('BEGIN');
       
-      // Update basic user info - only if we have actual values to update
-      const hasUserUpdates = profileData.firstName || profileData.lastName || profileData.phone || profileData.targetRoles;
-      const hasImageUpdate = profileData.profileImageUrl !== undefined && profileData.profileImageUrl !== null;
+      // Update basic user info - build query dynamically based on provided fields
+      const updateFields = [];
+      const queryParams = [];
+      let paramIndex = 1;
       
-      if (hasUserUpdates || hasImageUpdate) {
+      // Build dynamic update query for users table
+      if (profileData.firstName !== undefined) {
+        const value = profileData.firstName !== '' ? profileData.firstName : null;
+        updateFields.push(`first_name = $${paramIndex}`);
+        queryParams.push(value);
+        paramIndex++;
+      }
+      
+      if (profileData.lastName !== undefined) {
+        const value = profileData.lastName !== '' ? profileData.lastName : null;
+        updateFields.push(`last_name = $${paramIndex}`);
+        queryParams.push(value);
+        paramIndex++;
+      }
+      
+      if (profileData.phone !== undefined) {
+        const value = profileData.phone !== '' ? profileData.phone : null;
+        updateFields.push(`phone = $${paramIndex}`);
+        queryParams.push(value);
+        paramIndex++;
+      }
+      
+      if (profileData.profileImageUrl !== undefined) {
+        updateFields.push(`profile_image_url = $${paramIndex}`);
+        queryParams.push(profileData.profileImageUrl);
+        paramIndex++;
+      }
+      
+      // Always update updated_at
+      updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+      
+      // Only run update if there are fields to update
+      if (updateFields.length > 1) { // More than just updated_at
+        queryParams.push(userId);
+        
         const userUpdateQuery = `
           UPDATE users 
-          SET first_name = COALESCE($1, first_name),
-              last_name = COALESCE($2, last_name),
-              phone = COALESCE($3, phone),
-              profile_image_url = COALESCE($4, profile_image_url),
-              preferences = COALESCE($5, preferences),
-              updated_at = CURRENT_TIMESTAMP
-          WHERE id = $6
+          SET ${updateFields.join(', ')}
+          WHERE id = $${paramIndex}
         `;
         
-        // Prepare preferences object
-        let preferences = {};
-        if (profileData.targetRoles) {
-          preferences.targetRoles = profileData.targetRoles;
-        }
-        
-        await client.query(userUpdateQuery, [
-          profileData.firstName || null,
-          profileData.lastName || null,
-          profileData.phone || null,
-          profileData.profileImageUrl || null,
-          Object.keys(preferences).length > 0 ? JSON.stringify(preferences) : null,
-          userId
-        ]);
+        await client.query(userUpdateQuery, queryParams);
       }
       
       // Update or create user profile
@@ -208,17 +231,35 @@ class UserProfileService {
               certifications = COALESCE($4, certifications),
               languages = COALESCE($5, languages),
               target_roles = COALESCE($6, target_roles),
+              resume_url = COALESCE($7, resume_url),
               updated_at = CURRENT_TIMESTAMP
-          WHERE user_id = $7
+          WHERE user_id = $8
         `;
         
+        // Handle resume URL - convert file ID to URL if needed
+        let resumeUrl = profileData.resumeUrl;
+        if (resumeUrl && !resumeUrl.startsWith('/uploads/') && !resumeUrl.startsWith('http')) {
+          // This is likely a file ID, get the actual file path from files table
+          try {
+            const fileQuery = 'SELECT file_path FROM files WHERE id = $1 AND user_id = $2';
+            const fileResult = await client.query(fileQuery, [resumeUrl, userId]);
+            if (fileResult.rows.length > 0) {
+              resumeUrl = fileResult.rows[0].file_path;
+            }
+          } catch (error) {
+            Logger.warn(`Failed to get file path for resume ID: ${resumeUrl}`, error);
+            resumeUrl = null;
+          }
+        }
+        
         await client.query(profileUpdateQuery, [
-          profileData.skills ? JSON.stringify(profileData.skills) : null,
-          profileData.experienceYears || null,
-          profileData.education ? JSON.stringify(profileData.education) : null,
-          profileData.certifications ? JSON.stringify(profileData.certifications) : null,
-          profileData.languages ? JSON.stringify(profileData.languages) : null,
-          profileData.targetRoles ? JSON.stringify(profileData.targetRoles) : null,
+          profileData.skills !== undefined ? JSON.stringify(profileData.skills) : null,
+          profileData.experienceYears !== undefined ? profileData.experienceYears : null,
+          profileData.education !== undefined ? JSON.stringify(profileData.education) : null,
+          profileData.certifications !== undefined ? JSON.stringify(profileData.certifications) : null,
+          profileData.languages !== undefined ? JSON.stringify(profileData.languages) : null,
+          profileData.targetRoles !== undefined ? JSON.stringify(profileData.targetRoles) : null,
+          resumeUrl !== undefined ? resumeUrl : null,
           userId
         ]);
       } else {
@@ -226,18 +267,35 @@ class UserProfileService {
         const profileInsertQuery = `
           INSERT INTO user_profiles (
             user_id, skills, experience_years, education, 
-            certifications, languages, target_roles, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            certifications, languages, target_roles, resume_url, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         `;
+        
+        // Handle resume URL - convert file ID to URL if needed
+        let resumeUrl = profileData.resumeUrl;
+        if (resumeUrl && !resumeUrl.startsWith('/uploads/') && !resumeUrl.startsWith('http')) {
+          // This is likely a file ID, get the actual file path from files table
+          try {
+            const fileQuery = 'SELECT file_path FROM files WHERE id = $1 AND user_id = $2';
+            const fileResult = await client.query(fileQuery, [resumeUrl, userId]);
+            if (fileResult.rows.length > 0) {
+              resumeUrl = fileResult.rows[0].file_path;
+            }
+          } catch (error) {
+            Logger.warn(`Failed to get file path for resume ID: ${resumeUrl}`, error);
+            resumeUrl = null;
+          }
+        }
         
         await client.query(profileInsertQuery, [
           userId,
-          profileData.skills ? JSON.stringify(profileData.skills) : JSON.stringify([]),
-          profileData.experienceYears || null,
-          profileData.education ? JSON.stringify(profileData.education) : JSON.stringify([]),
-          profileData.certifications ? JSON.stringify(profileData.certifications) : JSON.stringify([]),
-          profileData.languages ? JSON.stringify(profileData.languages) : JSON.stringify([]),
-          profileData.targetRoles ? JSON.stringify(profileData.targetRoles) : JSON.stringify([])
+          profileData.skills !== undefined ? JSON.stringify(profileData.skills) : JSON.stringify([]),
+          profileData.experienceYears !== undefined ? profileData.experienceYears : null,
+          profileData.education !== undefined ? JSON.stringify(profileData.education) : JSON.stringify([]),
+          profileData.certifications !== undefined ? JSON.stringify(profileData.certifications) : JSON.stringify([]),
+          profileData.languages !== undefined ? JSON.stringify(profileData.languages) : JSON.stringify([]),
+          profileData.targetRoles !== undefined ? JSON.stringify(profileData.targetRoles) : JSON.stringify([]),
+          resumeUrl !== undefined ? resumeUrl : null
         ]);
       }
       
@@ -509,7 +567,7 @@ class UserProfileService {
    */
   async getFileInfo(fileId, userId) {
     try {
-      const query = `
+      const sqlQuery = `
         SELECT 
           id, file_name, file_path, file_size, mime_type, 
           storage_method, created_at, updated_at
@@ -517,7 +575,7 @@ class UserProfileService {
         WHERE id = $1 AND user_id = $2
       `;
       
-      const result = await query(query, [fileId, userId]);
+      const result = await query(sqlQuery, [fileId, userId]);
       
       if (result.rows.length === 0) {
         return null;
@@ -537,6 +595,47 @@ class UserProfileService {
       
     } catch (error) {
       Logger.error('Failed to get file info', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get file by path
+   * @param {string} filePath - File path
+   * @param {string} userId - User ID
+   * @returns {Promise<Object|null>} File information
+   */
+  async getFileByPath(filePath, userId) {
+    try {
+      const sqlQuery = `
+        SELECT 
+          id, file_name, file_path, file_size, mime_type, 
+          storage_method, created_at, updated_at
+        FROM files 
+        WHERE file_path = $1 AND user_id = $2
+        LIMIT 1
+      `;
+      
+      const result = await query(sqlQuery, [filePath, userId]);
+      
+      if (result.rows.length === 0) {
+        return null;
+      }
+      
+      const file = result.rows[0];
+      return {
+        id: file.id,
+        fileName: file.file_name,
+        filePath: file.file_path,
+        fileSize: file.file_size,
+        mimeType: file.mime_type,
+        storageMethod: file.storage_method,
+        createdAt: file.created_at,
+        updatedAt: file.updated_at
+      };
+      
+    } catch (error) {
+      Logger.error('Failed to get file by path', error);
       throw error;
     }
   }

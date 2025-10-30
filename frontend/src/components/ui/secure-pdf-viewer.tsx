@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +32,7 @@ const SecurePDFViewer: React.FC<SecurePDFViewerProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [fileInfo, setFileInfo] = useState<any>(null);
+  const objectUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     const loadPDF = async () => {
@@ -40,17 +41,31 @@ const SecurePDFViewer: React.FC<SecurePDFViewerProps> = ({
         return;
       }
 
+      // Clean up previous URL if it exists
+      if (objectUrlRef.current) {
+        window.URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+
       try {
         setLoading(true);
         setError(false);
 
-        // Get file info first
-        const info = await consolidatedAPI.getFileInfo(currentUser, fileId);
-        setFileInfo(info);
+        // Get file info first (optional)
+        try {
+          const info = await consolidatedAPI.getFileInfo(currentUser, fileId);
+          setFileInfo(info);
+        } catch (infoError) {
+          console.warn('Could not get file info:', infoError);
+          // Continue even if file info fails
+        }
 
-        // Get secure PDF URL
-        const url = await consolidatedAPI.viewFile(currentUser, fileId);
-        setPdfUrl(url);
+        // Download PDF as blob and create object URL for iframe
+        // This works because iframes can't send custom auth headers
+        const blob = await consolidatedAPI.downloadFile(currentUser, fileId);
+        const objectUrl = window.URL.createObjectURL(blob);
+        objectUrlRef.current = objectUrl;
+        setPdfUrl(objectUrl);
       } catch (error) {
         console.error('Failed to load PDF:', error);
         setError(true);
@@ -65,6 +80,14 @@ const SecurePDFViewer: React.FC<SecurePDFViewerProps> = ({
     };
 
     loadPDF();
+    
+    // Cleanup: revoke object URL when component unmounts or dependencies change
+    return () => {
+      if (objectUrlRef.current) {
+        window.URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+    };
   }, [fileId, currentUser, toast]);
 
   const handleDownload = async () => {

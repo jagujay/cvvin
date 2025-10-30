@@ -111,16 +111,17 @@ router.get('/profile',
         });
       }
 
+      // Only return fields that are actually collected and stored
       res.json({
         success: true,
         data: {
           id: profile.id,
           firebase_uid: profile.firebase_uid,
           email: profile.email,
-          firstName: profile.first_name,
-          lastName: profile.last_name,
-          phone: profile.phone,
-          profileImageUrl: profile.profile_image_url,
+          firstName: profile.first_name || null,
+          lastName: profile.last_name || null,
+          phone: profile.phone || null,
+          profileImageUrl: profile.profile_image_url || null,
           isActive: profile.is_active,
           createdAt: profile.created_at,
           updatedAt: profile.updated_at,
@@ -128,13 +129,9 @@ router.get('/profile',
             targetRoles: profile.target_roles || []
           },
           profile: {
-            resumeUrl: profile.resume_url,
-            resumeText: profile.resume_text,
+            resumeUrl: profile.resume_url || null,
             skills: profile.skills || [],
-            experienceYears: profile.experience_years,
             education: profile.education || [],
-            certifications: profile.certifications || [],
-            languages: profile.languages || [],
             createdAt: profile.profile_created_at,
             updatedAt: profile.profile_updated_at
           }
@@ -164,6 +161,7 @@ router.put('/profile',
         lastName,
         phone,
         profileImageUrl,
+        resumeUrl,
         skills,
         experienceYears,
         education,
@@ -177,6 +175,7 @@ router.put('/profile',
         lastName,
         phone,
         profileImageUrl,
+        resumeUrl,
         skills,
         experienceYears,
         education,
@@ -306,8 +305,30 @@ router.post('/profile/image',
         });
       }
 
-      // Create URL for the uploaded file
-      const imageUrl = `/uploads/users/${req.user.id}/${req.file.filename}`;
+      // Create file record in files table
+      // req.file.path is absolute (e.g., C:\...\uploads\users\...)
+      // We need to store relative path from project root (e.g., /uploads/users/...)
+      const absolutePath = req.file.path;
+      const projectRoot = process.cwd();
+      let relativePath = path.relative(projectRoot, absolutePath).replace(/\\/g, '/');
+      // Ensure it starts with /
+      if (!relativePath.startsWith('/')) {
+        relativePath = '/' + relativePath;
+      }
+      
+      const fileData = {
+        fileName: req.file.originalname,
+        filePath: relativePath,
+        fileSize: req.file.size,
+        mimeType: req.file.mimetype,
+        userId: req.user.id
+      };
+      
+      // Upload file to files table (this creates the record)
+      const uploadedFile = await userService.uploadFile(fileData);
+      
+      // Create URL for the uploaded file (use file ID reference or path)
+      const imageUrl = fileData.filePath;
       
       // Update user profile with image URL
       const updatedUser = await userService.updateProfileImage(req.user.id, imageUrl);
@@ -319,6 +340,7 @@ router.post('/profile/image',
         message: 'Profile image uploaded successfully',
         data: {
           imageUrl: imageUrl,
+          fileId: uploadedFile.id,
           fileName: req.file.filename,
           fileSize: req.file.size,
           updatedAt: updatedUser.updated_at
@@ -394,7 +416,33 @@ router.get('/files',
   authMiddleware.requireActiveUser.bind(authMiddleware),
   asyncHandler(async (req, res) => {
     try {
-      const { type } = req.query;
+      const { type, path: filePath } = req.query;
+      
+      // If path is provided, find file by path
+      if (filePath) {
+        const file = await userService.getFileByPath(filePath, req.user.id);
+        if (!file) {
+          return res.json({
+            success: true,
+            data: []
+          });
+        }
+        
+        return res.json({
+          success: true,
+          data: [{
+            id: file.id,
+            fileName: file.fileName,
+            filePath: file.filePath,
+            fileSize: file.fileSize,
+            mimeType: file.mimeType,
+            storageMethod: file.storageMethod,
+            uploadDate: file.createdAt
+          }]
+        });
+      }
+      
+      // Otherwise, get files by type or all files
       const files = await userService.getUserFiles(req.user.id, type);
 
       res.json({
@@ -514,9 +562,18 @@ router.post('/files/upload',
         });
       }
       
+      // Convert absolute path to relative path (consistent with profile image upload)
+      const absolutePath = req.file.path;
+      const projectRoot = process.cwd();
+      let relativePath = path.relative(projectRoot, absolutePath).replace(/\\/g, '/');
+      // Ensure it starts with /
+      if (!relativePath.startsWith('/')) {
+        relativePath = '/' + relativePath;
+      }
+      
       const fileData = {
         fileName: req.file.originalname,
-        filePath: req.file.path,
+        filePath: relativePath,
         fileSize: req.file.size,
         mimeType: req.file.mimetype,
         userId: req.user.id

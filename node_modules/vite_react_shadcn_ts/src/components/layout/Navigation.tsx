@@ -19,6 +19,7 @@ interface NavigationProps {
   user?: {
     fullName: string;
     profilePicture?: string;
+    profileImageFileId?: string;
     isProfileComplete?: boolean;
   };
 }
@@ -58,7 +59,7 @@ const Navigation = ({ isAuthenticated = false, user }: NavigationProps) => {
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <SecureAvatar 
                       className="h-10 w-10"
-                      fileId={user.profilePicture ? extractFileIdFromUrl(user.profilePicture) : undefined}
+                      fileId={user.profileImageFileId || (user.profilePicture ? extractFileIdFromUrl(user.profilePicture) : undefined)}
                       imageUrl={user.profilePicture}
                       fallbackText={generateAvatarFallback(user.fullName)}
                       size={40}

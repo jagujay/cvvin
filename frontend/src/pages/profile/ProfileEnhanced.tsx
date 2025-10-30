@@ -52,8 +52,9 @@ const ProfileEnhanced = () => {
       }
 
       try {
-        // First, sync the user to ensure they exist in the database
-        await consolidatedAPI.syncUser(currentUser);
+        // Load the profile first - syncUser will be called only if needed (on first login)
+        // Don't sync on every profile load as it overwrites saved data
+        // The auth middleware already handles sync during authentication
         
         // Load the profile and completion status in parallel
         const [profile, completion] = await Promise.all([
@@ -64,16 +65,32 @@ const ProfileEnhanced = () => {
         setUserProfile(profile);
         setProfileCompletion(completion);
 
-        // Load file information in parallel
-        const [profileImage, resume] = await Promise.all([
-          consolidatedAPI.getProfileImageFile(currentUser),
-          consolidatedAPI.getResumeFile(currentUser)
-        ]);
+        // Load file information - try multiple methods for profile image
+        let profileImage = null;
+        try {
+          // First try to get by file type
+          profileImage = await consolidatedAPI.getProfileImageFile(currentUser);
+          
+          // If not found and profileImageUrl exists, try to find by path
+          if (!profileImage && profile.profileImageUrl) {
+            const filesByPath = await consolidatedAPI.getUserFiles(currentUser);
+            // Look for file matching the profileImageUrl path
+            profileImage = filesByPath.find((f: any) => 
+              f.filePath === profile.profileImageUrl || 
+              profile.profileImageUrl?.includes(f.filePath) ||
+              f.filePath?.includes(profile.profileImageUrl)
+            ) || null;
+          }
+        } catch (error) {
+          // Silently handle error - profile image is optional
+        }
+
+        // Load resume file
+        const resume = await consolidatedAPI.getResumeFile(currentUser).catch(() => null);
 
         setProfileImageFile(profileImage);
         setResumeFile(resume);
       } catch (error) {
-        console.error('Failed to load user profile:', error);
         toast({
           variant: "destructive",
           title: "Failed to Load Profile",
@@ -146,7 +163,7 @@ const ProfileEnhanced = () => {
     <Layout 
       isAuthenticated={!!currentUser}
       user={{ 
-        fullName: `${userProfile.firstName} ${userProfile.lastName}`, 
+        fullName: [userProfile.firstName, userProfile.lastName].filter(Boolean).join(' ') || 'User', 
         profilePicture: userProfile.profileImageUrl || currentUser?.photoURL 
       }}
     >
@@ -188,11 +205,10 @@ const ProfileEnhanced = () => {
 
           {/* Profile Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="resume">Resume</TabsTrigger>
               <TabsTrigger value="skills">Skills & Education</TabsTrigger>
-              <TabsTrigger value="preferences">Preferences</TabsTrigger>
             </TabsList>
 
             {/* Overview Tab */}
@@ -213,13 +229,21 @@ const ProfileEnhanced = () => {
                       className="w-24 h-24"
                       fileId={profileImageFile?.id}
                       imageUrl={userProfile.profileImageUrl || currentUser?.photoURL}
-                      fallbackText={generateAvatarFallback(`${userProfile.firstName} ${userProfile.lastName}`)}
+                      fallbackText={generateAvatarFallback([userProfile.firstName, userProfile.lastName].filter(Boolean).join(' ') || 'User')}
                       size={96}
                       quality={90}
                     />
                     <div className="flex-1 space-y-4">
                       <div>
-                        <h2 className="text-2xl font-semibold">{`${userProfile.firstName} ${userProfile.lastName}`}</h2>
+                        <h2 className="text-2xl font-semibold">
+                          {userProfile.firstName && userProfile.lastName 
+                            ? `${userProfile.firstName} ${userProfile.lastName}`
+                            : userProfile.firstName 
+                            ? userProfile.firstName 
+                            : userProfile.lastName 
+                            ? userProfile.lastName 
+                            : 'User'}
+                        </h2>
                         {profileCompletion?.isComplete && (
                           <Badge variant="default" className="mt-2">
                             <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -230,11 +254,13 @@ const ProfileEnhanced = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="flex items-center gap-2">
                           <Mail className="w-4 h-4 text-muted-foreground" />
-                          <span>{userProfile.email}</span>
+                          <span>{userProfile.email || 'Not provided'}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Phone className="w-4 h-4 text-muted-foreground" />
-                          <span>{userProfile.phone || "Not provided"}</span>
+                          <span>
+                            {userProfile.phone || "Not provided"}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -409,8 +435,8 @@ const ProfileEnhanced = () => {
                               </p>
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-muted-foreground mb-1">GPA</p>
-                              <p className="text-lg">{edu.gpa || "N/A"}</p>
+                              <p className="text-sm font-medium text-muted-foreground mb-1">Current Semester</p>
+                              <p className="text-lg">{edu.currentSemester || 'N/A'}</p>
                             </div>
                           </div>
                         </div>
@@ -421,10 +447,8 @@ const ProfileEnhanced = () => {
                   )}
                 </CardContent>
               </Card>
-            </TabsContent>
 
-            {/* Preferences Tab */}
-            <TabsContent value="preferences" className="space-y-6">
+              {/* Target Roles */}
               <Card className="shadow-soft">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">

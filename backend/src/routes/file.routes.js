@@ -37,7 +37,27 @@ router.get('/:fileId/download',
       
       // Check if file exists on filesystem
       if (fileInfo.storageMethod === 'filesystem') {
-        const filePath = path.join(process.cwd(), fileInfo.filePath);
+        // Handle both absolute paths (old files) and relative paths (new files)
+        let filePath;
+        // On Windows: absolute paths start with C:\, D:\, etc.
+        // On Unix: absolute paths start with /
+        // We store relative paths as /uploads/... which path.isAbsolute() thinks is absolute on Windows
+        // So we need special handling: if it's a Windows absolute path (has drive letter), use it; otherwise treat as relative
+        if (process.platform === 'win32' && /^[A-Za-z]:[\\/]/.test(fileInfo.filePath)) {
+          // Windows absolute path (e.g., C:\... or D:\...) - use directly
+          filePath = fileInfo.filePath;
+        } else if (process.platform !== 'win32' && path.isAbsolute(fileInfo.filePath)) {
+          // Unix absolute path - use directly (shouldn't happen in our case)
+          filePath = fileInfo.filePath;
+        } else {
+          // Relative path (including /uploads/... on Windows) - join with project root
+          if (fileInfo.filePath.startsWith('/')) {
+            // Remove leading / and join
+            filePath = path.join(process.cwd(), fileInfo.filePath.substring(1));
+          } else {
+            filePath = path.join(process.cwd(), fileInfo.filePath);
+          }
+        }
         
         try {
           await fs.access(filePath);
@@ -54,11 +74,22 @@ router.get('/:fileId/download',
           Logger.info(`File downloaded: ${fileInfo.fileName} by user: ${req.user.email}`);
           
         } catch (error) {
-          Logger.error(`File not found on filesystem: ${filePath}`, error);
+          Logger.error(`File not found on filesystem`, {
+            filePath: filePath,
+            storedPath: fileInfo.filePath,
+            isAbsolute: path.isAbsolute(fileInfo.filePath),
+            cwd: process.cwd(),
+            error: error.message
+          });
           return res.status(404).json({
             success: false,
             error: 'File not found',
-            message: 'File exists in database but not on filesystem'
+            message: `File exists in database but not on filesystem. Path: ${filePath}`,
+            debug: {
+              storedPath: fileInfo.filePath,
+              resolvedPath: filePath,
+              isAbsolute: path.isAbsolute(fileInfo.filePath)
+            }
           });
         }
       } else {
@@ -106,7 +137,27 @@ router.get('/:fileId/view',
       
       // Check if file exists on filesystem
       if (fileInfo.storageMethod === 'filesystem') {
-        const filePath = path.join(process.cwd(), fileInfo.filePath);
+        // Handle both absolute paths (old files) and relative paths (new files)
+        let filePath;
+        // On Windows: absolute paths start with C:\, D:\, etc.
+        // On Unix: absolute paths start with /
+        // We store relative paths as /uploads/... which path.isAbsolute() thinks is absolute on Windows
+        // So we need special handling: if it's a Windows absolute path (has drive letter), use it; otherwise treat as relative
+        if (process.platform === 'win32' && /^[A-Za-z]:[\\/]/.test(fileInfo.filePath)) {
+          // Windows absolute path (e.g., C:\... or D:\...) - use directly
+          filePath = fileInfo.filePath;
+        } else if (process.platform !== 'win32' && path.isAbsolute(fileInfo.filePath)) {
+          // Unix absolute path - use directly (shouldn't happen in our case)
+          filePath = fileInfo.filePath;
+        } else {
+          // Relative path (including /uploads/... on Windows) - join with project root
+          if (fileInfo.filePath.startsWith('/')) {
+            // Remove leading / and join
+            filePath = path.join(process.cwd(), fileInfo.filePath.substring(1));
+          } else {
+            filePath = path.join(process.cwd(), fileInfo.filePath);
+          }
+        }
         
         try {
           await fs.access(filePath);
@@ -123,11 +174,22 @@ router.get('/:fileId/view',
           Logger.info(`File viewed: ${fileInfo.fileName} by user: ${req.user.email}`);
           
         } catch (error) {
-          Logger.error(`File not found on filesystem: ${filePath}`, error);
+          Logger.error(`File not found on filesystem`, {
+            filePath: filePath,
+            storedPath: fileInfo.filePath,
+            isAbsolute: path.isAbsolute(fileInfo.filePath),
+            cwd: process.cwd(),
+            error: error.message
+          });
           return res.status(404).json({
             success: false,
             error: 'File not found',
-            message: 'File exists in database but not on filesystem'
+            message: `File exists in database but not on filesystem. Path: ${filePath}`,
+            debug: {
+              storedPath: fileInfo.filePath,
+              resolvedPath: filePath,
+              isAbsolute: path.isAbsolute(fileInfo.filePath)
+            }
           });
         }
       } else {

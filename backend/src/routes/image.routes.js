@@ -48,7 +48,29 @@ router.get('/:fileId',
       
       // Check if file exists on filesystem
       if (fileInfo.storageMethod === 'filesystem') {
-        const filePath = path.join(process.cwd(), fileInfo.filePath);
+        // Handle both absolute paths (old files) and relative paths (new files)
+        let filePath;
+        // On Windows: absolute paths start with C:\, D:\, etc.
+        // On Unix: absolute paths start with /
+        // We store relative paths as /uploads/... which path.isAbsolute() thinks is absolute on Windows
+        // So we need special handling: if it's a Windows absolute path (has drive letter), use it; otherwise treat as relative
+        if (process.platform === 'win32' && /^[A-Za-z]:[\\/]/.test(fileInfo.filePath)) {
+          // Windows absolute path (e.g., C:\... or D:\...) - use directly
+          filePath = fileInfo.filePath;
+        } else if (process.platform !== 'win32' && path.isAbsolute(fileInfo.filePath)) {
+          // Unix absolute path - use directly (shouldn't happen in our case)
+          filePath = fileInfo.filePath;
+        } else {
+          // Relative path (including /uploads/... on Windows) - join with project root
+          if (fileInfo.filePath.startsWith('/')) {
+            // Remove leading / and join
+            filePath = path.join(process.cwd(), fileInfo.filePath.substring(1));
+          } else {
+            filePath = path.join(process.cwd(), fileInfo.filePath);
+          }
+        }
+        
+        Logger.info(`Attempting to serve image: ${fileInfo.fileName} from path: ${filePath}`);
         
         try {
           await fs.access(filePath);
@@ -167,35 +189,77 @@ router.get('/:fileId/thumbnail',
       const thumbnailSize = parseInt(size);
       
       if (fileInfo.storageMethod === 'filesystem') {
-        const filePath = path.join(process.cwd(), fileInfo.filePath);
+        // Handle both absolute paths (old files) and relative paths (new files)
+        let filePath;
+        // On Windows: absolute paths start with C:\, D:\, etc.
+        // On Unix: absolute paths start with /
+        // We store relative paths as /uploads/... which path.isAbsolute() thinks is absolute on Windows
+        // So we need special handling: if it's a Windows absolute path (has drive letter), use it; otherwise treat as relative
+        if (process.platform === 'win32' && /^[A-Za-z]:[\\/]/.test(fileInfo.filePath)) {
+          // Windows absolute path (e.g., C:\... or D:\...) - use directly
+          filePath = fileInfo.filePath;
+        } else if (process.platform !== 'win32' && path.isAbsolute(fileInfo.filePath)) {
+          // Unix absolute path - use directly (shouldn't happen in our case)
+          filePath = fileInfo.filePath;
+        } else {
+          // Relative path (including /uploads/... on Windows) - join with project root
+          if (fileInfo.filePath.startsWith('/')) {
+            // Remove leading / and join
+            filePath = path.join(process.cwd(), fileInfo.filePath.substring(1));
+          } else {
+            filePath = path.join(process.cwd(), fileInfo.filePath);
+          }
+        }
+        
+        Logger.info(`Generating thumbnail for: ${fileInfo.fileName} from path: ${filePath}`);
         
         try {
           await fs.access(filePath);
           
-          // Generate thumbnail
-          const thumbnail = await sharp(filePath)
-            .resize(thumbnailSize, thumbnailSize, {
-              fit: 'cover',
-              position: 'center'
-            })
-            .jpeg({ quality: 80 })
-            .toBuffer();
+          // Generate thumbnail - ensure we catch sharp errors
+          let thumbnail;
+          try {
+            thumbnail = await sharp(filePath)
+              .resize(thumbnailSize, thumbnailSize, {
+                fit: 'cover',
+                position: 'center'
+              })
+              .jpeg({ quality: 80 })
+              .toBuffer();
+          } catch (sharpError) {
+            Logger.error('Sharp processing error:', sharpError);
+            return res.status(500).json({
+              success: false,
+              error: 'Image processing failed',
+              message: sharpError.message
+            });
+          }
           
+          // Set headers BEFORE sending response
           res.setHeader('Content-Type', 'image/jpeg');
           res.setHeader('Content-Disposition', `inline; filename="thumb_${fileInfo.fileName}"`);
           res.setHeader('Cache-Control', 'public, max-age=31536000');
           res.setHeader('Content-Length', thumbnail.length);
           
+          // Send binary data
           res.send(thumbnail);
           
           Logger.info(`Thumbnail generated: ${fileInfo.fileName} (${thumbnailSize}x${thumbnailSize}) by user: ${req.user.email}`);
           
         } catch (error) {
-          Logger.error(`Image not found on filesystem: ${filePath}`, error);
+          Logger.error(`Image not found on filesystem:`, {
+            filePath: filePath,
+            storedPath: fileInfo.filePath,
+            userId: userId,
+            fileId: fileId,
+            error: error.message
+          });
+          // Ensure JSON response
+          res.setHeader('Content-Type', 'application/json');
           return res.status(404).json({
             success: false,
             error: 'Image not found',
-            message: 'Image exists in database but not on filesystem'
+            message: `Image exists in database but not on filesystem. Path: ${filePath}`
           });
         }
       } else {
@@ -252,7 +316,27 @@ router.get('/:fileId/info',
       let imageMetadata = {};
       
       if (fileInfo.storageMethod === 'filesystem') {
-        const filePath = path.join(process.cwd(), fileInfo.filePath);
+        // Handle both absolute paths (old files) and relative paths (new files)
+        let filePath;
+        // On Windows: absolute paths start with C:\, D:\, etc.
+        // On Unix: absolute paths start with /
+        // We store relative paths as /uploads/... which path.isAbsolute() thinks is absolute on Windows
+        // So we need special handling: if it's a Windows absolute path (has drive letter), use it; otherwise treat as relative
+        if (process.platform === 'win32' && /^[A-Za-z]:[\\/]/.test(fileInfo.filePath)) {
+          // Windows absolute path (e.g., C:\... or D:\...) - use directly
+          filePath = fileInfo.filePath;
+        } else if (process.platform !== 'win32' && path.isAbsolute(fileInfo.filePath)) {
+          // Unix absolute path - use directly (shouldn't happen in our case)
+          filePath = fileInfo.filePath;
+        } else {
+          // Relative path (including /uploads/... on Windows) - join with project root
+          if (fileInfo.filePath.startsWith('/')) {
+            // Remove leading / and join
+            filePath = path.join(process.cwd(), fileInfo.filePath.substring(1));
+          } else {
+            filePath = path.join(process.cwd(), fileInfo.filePath);
+          }
+        }
         
         try {
           await fs.access(filePath);

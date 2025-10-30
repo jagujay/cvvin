@@ -49,6 +49,7 @@ const ProfileSetup = () => {
   const [roleSuggestions, setRoleSuggestions] = useState<string[]>([]);
   const [showSkillSuggestions, setShowSkillSuggestions] = useState(false);
   const [showRoleSuggestions, setShowRoleSuggestions] = useState(false);
+  const [existingResumeFile, setExistingResumeFile] = useState<any>(null);
 
   // Load existing user data if available
   useEffect(() => {
@@ -62,21 +63,32 @@ const ProfileSetup = () => {
         // Load profile and file data in parallel
         const [profile, profileImageFile, resumeFile] = await Promise.all([
           consolidatedAPI.getUserProfile(currentUser),
-          consolidatedAPI.getProfileImageFile(currentUser),
-          consolidatedAPI.getResumeFile(currentUser)
+          consolidatedAPI.getProfileImageFile(currentUser).catch(() => null),
+          consolidatedAPI.getResumeFile(currentUser).catch(() => null)
         ]);
         
         if (profile) {
           // Parse phone number if it exists
+          // Try to extract country code, but prioritize common codes
           let phoneNumber = "";
           let countryCode = "+1";
           if (profile.phone) {
-            const phoneMatch = profile.phone.match(/^(\+\d{1,3})(\d+)$/);
+            // Try to match common country codes first (1-3 digits)
+            // Priority: +91 (India), +1 (US/Canada), +44 (UK), etc.
+            const phoneMatch = profile.phone.match(/^(\+91|\+1|\+44|\+61|\+81|\+86|\+7|\+33|\+49|\+39|\+34|\+31|\+46|\+351|\+351|\+55|\+52|\+90|\+971|\+971|\+27|\+20|\+234|\+234)(\d+)$/) || 
+                              profile.phone.match(/^(\+\d{1,3})(\d+)$/);
             if (phoneMatch) {
               countryCode = phoneMatch[1];
               phoneNumber = phoneMatch[2];
             } else {
-              phoneNumber = profile.phone;
+              // If no match, check if it already has country code
+              if (profile.phone.startsWith('+')) {
+                // Keep the full phone as-is, don't split
+                phoneNumber = profile.phone;
+                countryCode = ""; // Will be extracted from phoneNumber on save
+              } else {
+                phoneNumber = profile.phone;
+              }
             }
           }
 
@@ -95,6 +107,15 @@ const ProfileSetup = () => {
             }
           }
 
+          // Handle profile picture - use existing URL or file
+          let profilePictureUrl = "";
+          if (profileImageFile) {
+            // Use the secure image URL for existing files
+            profilePictureUrl = await consolidatedAPI.getImageUrl(currentUser, profileImageFile.id);
+          } else if (profile.profileImageUrl) {
+            profilePictureUrl = profile.profileImageUrl;
+          }
+
           setFormData(prev => ({
             ...prev,
             firstName: profile.firstName || "",
@@ -102,7 +123,7 @@ const ProfileSetup = () => {
             email: profile.email,
             countryCode,
             phoneNumber,
-            profilePicture: profileImageFile ? `/uploads/users/${currentUser.uid}/${profileImageFile.fileName}` : profile.profileImageUrl || "",
+            profilePicture: profilePictureUrl,
             qualification,
             qualificationOther: qualification === 'other' ? qualification : '',
             college,
@@ -113,13 +134,13 @@ const ProfileSetup = () => {
 
           // Set file references if they exist
           if (resumeFile) {
-            // Note: We can't set the actual file object, but we can show that a resume exists
             console.log('Resume file exists:', resumeFile.fileName);
+            setExistingResumeFile(resumeFile);
           }
         }
       } catch (error) {
         // Profile doesn't exist yet, that's okay for new users
-        console.log('No existing profile found, starting fresh');
+        console.log('No existing profile found, starting fresh:', error);
       }
     };
 
@@ -244,7 +265,7 @@ const ProfileSetup = () => {
       return;
     }
 
-    if (!formData.resume) {
+    if (!formData.resume && !existingResumeFile) {
       toast({
         variant: "destructive",
         title: "Resume Required",
@@ -267,13 +288,20 @@ const ProfileSetup = () => {
       if (formData.resume) {
         const uploadResult = await consolidatedAPI.uploadFile(currentUser, formData.resume);
         resumeUrl = uploadResult.fileId; // Use fileId as reference
+      } else if (existingResumeFile) {
+        // Use existing resume file
+        resumeUrl = existingResumeFile.id;
       }
 
       // Prepare profile data
       const profileData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
-        phone: formData.phoneNumber ? `${formData.countryCode}${formData.phoneNumber}` : null,
+        phone: formData.phoneNumber 
+          ? (formData.phoneNumber.startsWith('+') 
+              ? formData.phoneNumber 
+              : `${formData.countryCode}${formData.phoneNumber}`)
+          : null,
         profileImageUrl: profileImageUrl,
         resumeUrl,
         skills: formData.skills,
@@ -281,6 +309,7 @@ const ProfileSetup = () => {
         education: formData.college ? [{
           degree: formData.qualification === 'other' ? formData.qualificationOther : formData.qualification,
           institution: formData.college,
+          currentSemester: formData.currentSemester || null,
           startDate: formData.yearOfPassing ? `${formData.yearOfPassing}-01-01` : null,
           endDate: formData.yearOfPassing ? `${formData.yearOfPassing}-12-31` : null,
           gpa: null
@@ -346,6 +375,13 @@ const ProfileSetup = () => {
                     1
                   </div>
                   Basic Information
+                  {formData.firstName && formData.lastName && (
+                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center ml-auto">
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -466,13 +502,20 @@ const ProfileSetup = () => {
                     2
                   </div>
                   Education
+                  {formData.qualification && formData.college && (
+                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center ml-auto">
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="qualification">Qualification</Label>
-                    <Select onValueChange={(value) => setFormData({ ...formData, qualification: value })}>
+                    <Select value={formData.qualification} onValueChange={(value) => setFormData({ ...formData, qualification: value })}>
                       <SelectTrigger className="mt-1">
                         <SelectValue placeholder="Select qualification" />
                       </SelectTrigger>
@@ -540,6 +583,13 @@ const ProfileSetup = () => {
                     3
                   </div>
                   Skills *
+                  {formData.skills.length > 0 && (
+                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center ml-auto">
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -639,6 +689,13 @@ const ProfileSetup = () => {
                     4
                   </div>
                   Interested Roles *
+                  {formData.interestedRoles.length > 0 && (
+                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center ml-auto">
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -738,9 +795,48 @@ const ProfileSetup = () => {
                     5
                   </div>
                   Resume *
+                  {(formData.resume || existingResumeFile) && (
+                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center ml-auto">
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                {existingResumeFile ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                          <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="font-medium text-green-800">Resume Already Uploaded</p>
+                          <p className="text-sm text-green-600">{existingResumeFile.fileName}</p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setExistingResumeFile(null);
+                          setFormData(prev => ({ ...prev, resume: null }));
+                        }}
+                      >
+                        Replace
+                      </Button>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground mb-2">Or upload a new resume:</p>
+                    </div>
+                  </div>
+                ) : null}
+                
                 <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
                   <input
                     type="file"

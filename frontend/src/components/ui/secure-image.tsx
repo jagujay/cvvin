@@ -38,6 +38,7 @@ const SecureImage: React.FC<SecureImageProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
+  const blobUrlRef = useRef<string | null>(null);
   const [isInView, setIsInView] = useState(!lazy);
 
   // Intersection Observer for lazy loading
@@ -69,46 +70,118 @@ const SecureImage: React.FC<SecureImageProps> = ({
         setError(false);
 
         // If we have a direct imageUrl and it's not a file path, use it directly
-        if (imageUrl && !imageUrl.startsWith('/uploads/')) {
+        if (imageUrl && !imageUrl.startsWith('/uploads/') && !imageUrl.includes('/api/images/')) {
           setSecureUrl(imageUrl);
           setLoading(false);
           return;
         }
 
-        // If we have a fileId, get the secure URL
+        // For authenticated images, fetch as blob and create object URL
         if (fileId && currentUser) {
-          let url: string;
-          
-          if (thumbnail) {
-            url = await consolidatedAPI.getImageThumbnail(currentUser, fileId, size);
-          } else {
-            url = await consolidatedAPI.getImageUrl(currentUser, fileId, {
-              width,
-              height,
-              quality,
-              format
-            });
-          }
-          
-          setSecureUrl(url);
-        } else if (imageUrl && currentUser) {
-          // Extract fileId from imageUrl if it's a file path
-          const fileIdFromUrl = extractFileIdFromUrl(imageUrl);
-          if (fileIdFromUrl) {
-            let url: string;
+          try {
+            // Get auth token
+            const token = await currentUser.getIdToken();
+            const headers = {
+              'Authorization': `Bearer ${token}`,
+            };
             
+            let fetchUrl: string;
             if (thumbnail) {
-              url = await consolidatedAPI.getImageThumbnail(currentUser, fileIdFromUrl, size);
+              // getImageThumbnail is async and returns Promise<string>, must await
+              fetchUrl = await consolidatedAPI.getImageThumbnail(currentUser, fileId, size);
             } else {
-              url = await consolidatedAPI.getImageUrl(currentUser, fileIdFromUrl, {
+              // getImageUrl is async and returns Promise<string>
+              fetchUrl = await consolidatedAPI.getImageUrl(currentUser, fileId, {
                 width,
                 height,
                 quality,
                 format
               });
             }
+
+            const response = await fetch(fetchUrl, { headers });
+            const contentType = response.headers.get('content-type');
             
-            setSecureUrl(url);
+            if (!response.ok) {
+              // Try to get error message, but don't assume it's text
+              let errorMessage = response.statusText;
+              try {
+                if (contentType && contentType.includes('application/json')) {
+                  const errorData = await response.json();
+                  errorMessage = errorData.message || errorData.error || errorMessage;
+                } else {
+                  const errorText = await response.text();
+                  errorMessage = errorText || errorMessage;
+                }
+              } catch (e) {
+                // Ignore error reading body
+              }
+              throw new Error(`Failed to fetch image: ${response.status} ${errorMessage}`);
+            }
+            
+            // Check if response is actually an image
+            if (contentType && !contentType.startsWith('image/')) {
+              throw new Error(`Server returned non-image content: ${contentType}`);
+            }
+            
+            const blob = await response.blob();
+            
+            // Validate blob type
+            if (!blob.type || !blob.type.startsWith('image/')) {
+              throw new Error(`Invalid image type: ${blob.type || 'unknown'}`);
+            }
+            
+            // Cleanup previous blob URL if exists
+            if (blobUrlRef.current) {
+              URL.revokeObjectURL(blobUrlRef.current);
+            }
+            const blobUrl = URL.createObjectURL(blob);
+            blobUrlRef.current = blobUrl;
+            setSecureUrl(blobUrl);
+          } catch (fetchError) {
+            setError(true);
+            setSecureUrl(fallbackSrc || '');
+          }
+        } else if (imageUrl && currentUser) {
+          // Extract fileId from imageUrl if it's a file path
+          const fileIdFromUrl = extractFileIdFromUrl(imageUrl);
+          if (fileIdFromUrl) {
+            try {
+              // Get auth token
+              const token = await currentUser.getIdToken();
+              const headers = {
+                'Authorization': `Bearer ${token}`,
+              };
+              
+              let fetchUrl: string;
+              if (thumbnail) {
+                fetchUrl = await consolidatedAPI.getImageThumbnail(currentUser, fileIdFromUrl, size);
+              } else {
+                fetchUrl = await consolidatedAPI.getImageUrl(currentUser, fileIdFromUrl, {
+                  width,
+                  height,
+                  quality,
+                  format
+                });
+              }
+
+              const response = await fetch(fetchUrl, { headers });
+              if (!response.ok) {
+                throw new Error(`Failed to fetch image: ${response.statusText}`);
+              }
+
+              const blob = await response.blob();
+              // Cleanup previous blob URL if exists
+              if (blobUrlRef.current) {
+                URL.revokeObjectURL(blobUrlRef.current);
+              }
+              const blobUrl = URL.createObjectURL(blob);
+              blobUrlRef.current = blobUrl;
+              setSecureUrl(blobUrl);
+            } catch (fetchError) {
+              setError(true);
+              setSecureUrl(fallbackSrc || '');
+            }
           } else {
             // Fallback to original URL if we can't extract fileId
             setSecureUrl(imageUrl);
@@ -118,7 +191,6 @@ const SecureImage: React.FC<SecureImageProps> = ({
           setSecureUrl(imageUrl || fallbackSrc || '');
         }
       } catch (error) {
-        console.error('Failed to load secure image:', error);
         setError(true);
         setSecureUrl(fallbackSrc || '');
       } finally {
@@ -127,6 +199,15 @@ const SecureImage: React.FC<SecureImageProps> = ({
     };
 
     loadSecureImage();
+
+    // Cleanup blob URL on unmount
+    return () => {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fileId, imageUrl, currentUser, thumbnail, size, width, height, quality, format, isInView, fallbackSrc]);
 
   // Extract fileId from URL like "/uploads/users/{userId}/{fileId}-filename"
@@ -167,8 +248,16 @@ const SecureImage: React.FC<SecureImageProps> = ({
             className
           )}
           loading={lazy ? "lazy" : "eager"}
-          onLoad={() => setLoading(false)}
-          onError={() => setError(true)}
+          onLoad={() => {
+            setLoading(false);
+          }}
+          onError={() => {
+            setError(true);
+            if (blobUrlRef.current) {
+              URL.revokeObjectURL(blobUrlRef.current);
+              blobUrlRef.current = null;
+            }
+          }}
           {...props}
         />
       )}

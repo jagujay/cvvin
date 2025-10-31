@@ -96,22 +96,60 @@ router.post('/sync',
 /**
  * Get user profile
  * GET /api/users/profile
+ * Returns user profile with empty defaults if profile doesn't exist yet (seamless for new users)
  */
 router.get('/profile',
   authMiddleware.authenticate.bind(authMiddleware),
   asyncHandler(async (req, res) => {
     try {
-      const profile = await userService.getUserProfile(req.user.id);
+      // User should already exist due to auth middleware, but get basic user info
+      const user = await userService.getUserById(req.user.id);
       
-      if (!profile) {
+      if (!user) {
+        // This shouldn't happen, but handle gracefully
+        Logger.warn(`User not found in database after authentication: ${req.user.id}`);
         return res.status(404).json({
           success: false,
-          error: 'Profile not found',
-          message: 'User profile not found'
+          error: 'User not found',
+          message: 'User not found in database'
         });
       }
 
-      // Only return fields that are actually collected and stored
+      // Try to get profile, but don't fail if it doesn't exist
+      const profile = await userService.getUserProfile(req.user.id);
+      
+      // If no profile exists, return user data with empty profile structure (seamless for new users)
+      if (!profile) {
+        return res.json({
+          success: true,
+          data: {
+            id: user.id,
+            firebase_uid: user.firebase_uid,
+            email: user.email,
+            firstName: user.first_name || null,
+            lastName: user.last_name || null,
+            phone: user.phone || null,
+            profileImageUrl: user.profile_image_url || null,
+            isActive: user.is_active,
+            createdAt: user.created_at,
+            updatedAt: user.updated_at,
+            preferences: {
+              targetRoles: []
+            },
+            profile: {
+              resumeUrl: null,
+              skills: [],
+              education: [],
+              certifications: [],
+              languages: [],
+              createdAt: null,
+              updatedAt: null
+            }
+          }
+        });
+      }
+
+      // Return full profile data
       res.json({
         success: true,
         data: {
@@ -130,8 +168,12 @@ router.get('/profile',
           },
           profile: {
             resumeUrl: profile.resume_url || null,
+            resumeText: profile.resume_text || null,
             skills: profile.skills || [],
+            experienceYears: profile.experience_years || null,
             education: profile.education || [],
+            certifications: profile.certifications || [],
+            languages: profile.languages || [],
             createdAt: profile.profile_created_at,
             updatedAt: profile.profile_updated_at
           }
@@ -410,6 +452,7 @@ router.post('/profile/resume',
 /**
  * Get user files
  * GET /api/users/files
+ * Returns empty array for new users (seamless - no errors)
  */
 router.get('/files',
   authMiddleware.authenticate.bind(authMiddleware),
@@ -443,6 +486,7 @@ router.get('/files',
       }
       
       // Otherwise, get files by type or all files
+      // For new users, this will return an empty array - perfectly normal
       const files = await userService.getUserFiles(req.user.id, type);
 
       res.json({
@@ -450,6 +494,7 @@ router.get('/files',
         data: files.map(file => ({
           id: file.id,
           fileName: file.fileName,
+          filePath: file.filePath,
           fileType: file.fileType,
           fileSize: file.fileSize,
           storageMethod: file.storageMethod,
@@ -462,10 +507,10 @@ router.get('/files',
       });
     } catch (error) {
       Logger.error('Failed to get user files', error);
-      res.status(500).json({
-        success: false,
-        error: 'Files fetch failed',
-        message: error.message
+      // Return empty array instead of error for new users
+      res.json({
+        success: true,
+        data: []
       });
     }
   })

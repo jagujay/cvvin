@@ -59,13 +59,27 @@ class AuthMiddleware {
       
       if (!user) {
         // Create new user if doesn't exist
-        user = await this.userService.syncFirebaseUser({
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.name,
-          photoURL: firebaseUser.picture,
-          phoneNumber: null // Phone number not available in ID token
-        });
+        // syncFirebaseUser now handles race conditions with ON CONFLICT
+        try {
+          user = await this.userService.syncFirebaseUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.name,
+            photoURL: firebaseUser.picture,
+            phoneNumber: null // Phone number not available in ID token
+          });
+        } catch (error) {
+          // If creation fails due to race condition, fetch the user that was created
+          if (error.code === '23505' || error.message.includes('duplicate key')) {
+            Logger.warn(`Race condition in user creation, fetching existing user: ${firebaseUser.uid}`);
+            user = await this.userService.getUserByFirebaseUid(firebaseUser.uid);
+            if (!user) {
+              throw error; // If still not found, throw original error
+            }
+          } else {
+            throw error;
+          }
+        }
       }
       
       return user;

@@ -55,12 +55,17 @@ class UserProfileService {
         Logger.info(`User synced (preserving user data): ${email}`);
         return result.rows[0];
       } else {
-        // Create new user
+        // Create new user with ON CONFLICT handling to prevent race conditions
+        // If user is created by another request simultaneously, just return the existing one
         const insertQuery = `
           INSERT INTO users (
             firebase_uid, email, first_name, last_name, phone, 
             profile_image_url, last_login, created_at, updated_at
           ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          ON CONFLICT (firebase_uid) DO UPDATE SET
+            email = EXCLUDED.email,
+            last_login = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
           RETURNING *
         `;
         
@@ -68,17 +73,29 @@ class UserProfileService {
         const firstName = nameParts[0] || '';
         const lastName = nameParts.slice(1).join(' ') || '';
         
-        const result = await query(insertQuery, [
-          uid,
-          email,
-          firstName,
-          lastName,
-          phoneNumber || null,
-          photoURL || null
-        ]);
-        
-        Logger.info(`New user created: ${email}`);
-        return result.rows[0];
+        try {
+          const result = await query(insertQuery, [
+            uid,
+            email,
+            firstName,
+            lastName,
+            phoneNumber || null,
+            photoURL || null
+          ]);
+          
+          Logger.info(`New user created or updated: ${email}`);
+          return result.rows[0];
+        } catch (error) {
+          // If still fails (shouldn't happen with ON CONFLICT), try to get existing user
+          if (error.code === '23505') { // Unique violation
+            Logger.warn(`Race condition detected, fetching existing user: ${email}`);
+            const existingUser = await this.getUserByFirebaseUid(uid);
+            if (existingUser) {
+              return existingUser;
+            }
+          }
+          throw error;
+        }
       }
     } catch (error) {
       Logger.error('Failed to sync Firebase user', error);

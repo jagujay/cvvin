@@ -52,41 +52,27 @@ const ProfileEnhanced = () => {
       }
 
       try {
-        // Load the profile first - syncUser will be called only if needed (on first login)
-        // Don't sync on every profile load as it overwrites saved data
-        // The auth middleware already handles sync during authentication
-        
+        // getUserProfile now handles new users seamlessly - returns empty profile if user doesn't exist
+        // Auth middleware already syncs users automatically
         // Load the profile and completion status in parallel
         const [profile, completion] = await Promise.all([
           consolidatedAPI.getUserProfile(currentUser),
-          consolidatedAPI.getProfileCompletionStatus(currentUser)
+          consolidatedAPI.getProfileCompletionStatus(currentUser).catch(() => ({
+            isComplete: false,
+            percentage: 0,
+            missingFields: []
+          }))
         ]);
         
         setUserProfile(profile);
         setProfileCompletion(completion);
 
-        // Load file information - try multiple methods for profile image
-        let profileImage = null;
-        try {
-          // First try to get by file type
-          profileImage = await consolidatedAPI.getProfileImageFile(currentUser);
-          
-          // If not found and profileImageUrl exists, try to find by path
-          if (!profileImage && profile.profileImageUrl) {
-            const filesByPath = await consolidatedAPI.getUserFiles(currentUser);
-            // Look for file matching the profileImageUrl path
-            profileImage = filesByPath.find((f: any) => 
-              f.filePath === profile.profileImageUrl || 
-              profile.profileImageUrl?.includes(f.filePath) ||
-              f.filePath?.includes(profile.profileImageUrl)
-            ) || null;
-          }
-        } catch (error) {
-          // Silently handle error - profile image is optional
-        }
-
-        // Load resume file
-        const resume = await consolidatedAPI.getResumeFile(currentUser).catch(() => null);
+        // Load file information - profile image and resume are optional
+        // These methods already handle errors gracefully and return null if not found
+        const [profileImage, resume] = await Promise.all([
+          consolidatedAPI.getProfileImageFile(currentUser),
+          consolidatedAPI.getResumeFile(currentUser)
+        ]);
 
         setProfileImageFile(profileImage);
         setResumeFile(resume);

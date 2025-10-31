@@ -121,6 +121,36 @@ class ConsolidatedAPI {
       method: 'GET',
       headers,
     });
+    
+    // Handle 404 gracefully - return empty profile structure for new users
+    if (response.status === 404) {
+      return {
+        id: '',
+        firebase_uid: user.uid,
+        email: user.email || '',
+        firstName: user.displayName?.split(' ')[0] || null,
+        lastName: user.displayName?.split(' ').slice(1).join(' ') || null,
+        phone: null,
+        profileImageUrl: user.photoURL || null,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        preferences: {
+          targetRoles: []
+        },
+        profile: {
+          resumeUrl: null,
+          skills: [],
+          education: [],
+          certifications: [],
+          languages: []
+        },
+        isProfileComplete: false,
+        profileCompletionPercentage: 0,
+        missingFields: []
+      };
+    }
+    
     const result = await this.handleResponse<{ success: boolean; data: UserProfile }>(response);
     return result.data;
   }
@@ -166,12 +196,24 @@ class ConsolidatedAPI {
       url += `?type=${fileType}`;
     }
     
-    const response = await fetch(url, {
-      method: 'GET',
-      headers,
-    });
-    const result = await this.handleResponse<{ success: boolean; data: any[] }>(response);
-    return result.data;
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+      });
+      
+      // If user has no files, return empty array instead of error
+      if (response.status === 404) {
+        return [];
+      }
+      
+      const result = await this.handleResponse<{ success: boolean; data: any[] }>(response);
+      return result.data || [];
+    } catch (error) {
+      // Return empty array for new users or users with no files
+      console.warn('Failed to get user files, returning empty array:', error);
+      return [];
+    }
   }
 
   // Check profile completion status
@@ -193,23 +235,25 @@ class ConsolidatedAPI {
   }
 
   // Get profile image file info
+  // This should never throw - always returns null if no image exists (seamless for new users)
   async getProfileImageFile(user: User): Promise<any | null> {
     try {
-      const files = await this.getUserFiles(user, 'profile_image');
+      const files = await this.getUserFiles(user, 'profile_image').catch(() => []);
       return files.length > 0 ? files[0] : null;
     } catch (error) {
-      console.error('Failed to get profile image file:', error);
+      // Silently return null - profile image is optional
       return null;
     }
   }
 
   // Get resume file info
+  // This should never throw - always returns null if no resume exists (seamless for new users)
   async getResumeFile(user: User): Promise<any | null> {
     try {
-      const files = await this.getUserFiles(user, 'resume_pdf');
+      const files = await this.getUserFiles(user, 'resume_pdf').catch(() => []);
       return files.length > 0 ? files[0] : null;
     } catch (error) {
-      console.error('Failed to get resume file:', error);
+      // Silently return null - resume is optional
       return null;
     }
   }

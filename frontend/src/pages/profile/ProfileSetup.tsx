@@ -57,14 +57,13 @@ const ProfileSetup = () => {
       if (!currentUser) return;
       
       try {
-        // First, sync the user to ensure they exist in the database
-        await consolidatedAPI.syncUser(currentUser);
-        
+        // getUserProfile now handles new users seamlessly - returns empty profile if user doesn't exist
+        // Auth middleware already syncs users automatically, so no need to call syncUser here
         // Load profile and file data in parallel
         const [profile, profileImageFile, resumeFile] = await Promise.all([
           consolidatedAPI.getUserProfile(currentUser),
-          consolidatedAPI.getProfileImageFile(currentUser).catch(() => null),
-          consolidatedAPI.getResumeFile(currentUser).catch(() => null)
+          consolidatedAPI.getProfileImageFile(currentUser), // Already handles errors gracefully
+          consolidatedAPI.getResumeFile(currentUser) // Already handles errors gracefully
         ]);
         
         if (profile) {

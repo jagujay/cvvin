@@ -40,9 +40,17 @@ const MCQTest = () => {
   }, []);
 
   useEffect(() => {
-    // Load previously selected answer for current question
-    setSelectedAnswer(answers[currentQuestion]);
-  }, [currentQuestion, answers]);
+    // Load previously selected answer for current question when question changes
+    const savedAnswer = answers[currentQuestion];
+    setSelectedAnswer(savedAnswer !== undefined ? savedAnswer : undefined);
+  }, [currentQuestion]);
+  
+  // Update selected answer when answers change (but don't reset on question change)
+  useEffect(() => {
+    if (answers[currentQuestion] !== undefined) {
+      setSelectedAnswer(answers[currentQuestion]);
+    }
+  }, [answers, currentQuestion]);
 
   const handleTimeUp = () => {
     toast({
@@ -54,8 +62,9 @@ const MCQTest = () => {
 
   const handleAnswerSelect = (value: string) => {
     const answerIndex = parseInt(value);
+    // Update both local state and answers object
     setSelectedAnswer(answerIndex);
-    setAnswers({ ...answers, [currentQuestion]: answerIndex });
+    setAnswers(prev => ({ ...prev, [currentQuestion]: answerIndex }));
   };
 
   const handleNext = () => {
@@ -129,38 +138,51 @@ const MCQTest = () => {
                 <CardTitle className="text-lg">Questions</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-5 lg:grid-cols-3 gap-2">
-                  {questions.map((_, index) => (
-                    <Button
-                      key={index}
-                      variant={getQuestionStatus(index) === "current" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentQuestion(index)}
-                      className={`relative ${
-                        getQuestionStatus(index) === "answered" 
-                          ? "bg-green-100 border-green-300 text-green-700" 
-                          : ""
-                      }`}
-                    >
-                      {index + 1}
-                      {getQuestionStatus(index) === "answered" && (
-                        <CheckCircle2 className="w-3 h-3 absolute -top-1 -right-1 bg-green-500 text-white rounded-full" />
-                      )}
-                    </Button>
-                  ))}
+                <div className="grid grid-cols-5 lg:grid-cols-4 gap-2">
+                  {questions.slice(0, totalQuestions).map((_, index) => {
+                    const status = getQuestionStatus(index);
+                    return (
+                      <Button
+                        key={index}
+                        variant={status === "current" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentQuestion(index)}
+                        className={`relative ${
+                          status === "answered" 
+                            ? "bg-green-100 border-green-300 text-green-700 hover:bg-green-200" 
+                            : status === "current"
+                            ? "ring-2 ring-primary"
+                            : ""
+                        }`}
+                      >
+                        {index + 1}
+                        {status === "answered" && (
+                          <CheckCircle2 className="w-3 h-3 absolute -top-1 -right-1 bg-green-500 text-white rounded-full" />
+                        )}
+                      </Button>
+                    );
+                  })}
                 </div>
-                <div className="mt-4 space-y-2 text-xs">
+                <div className="mt-4 pt-4 border-t space-y-2 text-xs">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-primary rounded-sm" />
-                    <span>Current</span>
+                    <div className="w-4 h-4 bg-primary rounded-sm ring-2 ring-primary" />
+                    <span className="font-medium">Current Question</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-100 border border-green-300 rounded-sm" />
-                    <span>Answered</span>
+                    <div className="w-4 h-4 bg-green-100 border-2 border-green-500 rounded-sm" />
+                    <span className="font-medium text-green-700">Answered</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 border border-border rounded-sm" />
-                    <span>Not Visited</span>
+                    <div className="w-4 h-4 border-2 border-gray-300 rounded-sm bg-white" />
+                    <span>Not Attempted</span>
+                  </div>
+                  <div className="mt-3 pt-3 border-t">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">Progress:</span>
+                      <span className="font-bold text-primary">
+                        {Object.keys(answers).length}/{totalQuestions}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -188,7 +210,7 @@ const MCQTest = () => {
               </CardHeader>
               <CardContent className="space-y-6">
                 <RadioGroup 
-                  value={selectedAnswer?.toString()} 
+                  value={selectedAnswer !== undefined ? selectedAnswer.toString() : ""} 
                   onValueChange={handleAnswerSelect}
                 >
                   <div className="space-y-3">

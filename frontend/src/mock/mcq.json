@@ -2,186 +2,320 @@
   "questions": [
     {
       "id": "mcq_001",
-      "category": "JavaScript",
-      "difficulty": "medium",
-      "timeLimit": 120,
-      "question": "What will be the output of the following JavaScript code?\n\n```javascript\nconsole.log(typeof null);\nconsole.log(typeof undefined);\nconsole.log(typeof {});\nconsole.log(typeof []);\n```",
+      "category": "Code Output",
+      "difficulty": "easy",
+      "question": "What will be the output of the following code?\n\n```\nint x = 5;\nint y = x++;\nint z = ++x;\nprint(x, y, z);\n```",
       "options": [
-        "null, undefined, object, array",
-        "object, undefined, object, object",
-        "null, undefined, object, object",
-        "object, undefined, object, array"
+        "5, 5, 6",
+        "7, 5, 7",
+        "6, 5, 7",
+        "7, 6, 7"
       ],
       "correctAnswer": 1,
-      "explanation": "In JavaScript, `typeof null` returns 'object' (a known quirk), `typeof undefined` returns 'undefined', `typeof {}` returns 'object', and `typeof []` returns 'object' (arrays are objects in JavaScript).",
-      "tags": ["javascript", "types", "fundamentals"]
+      "explanation": "x++ returns 5 then increments x to 6. ++x increments x to 7 then returns 7. So x=7, y=5, z=7.",
+      "tags": ["code-output", "increment", "operators"]
     },
     {
       "id": "mcq_002",
-      "category": "React",
-      "difficulty": "medium",
-      "timeLimit": 90,
-      "question": "Which of the following is the correct way to update state in a functional component using hooks?",
-      "options": [
-        "this.setState({count: count + 1})",
-        "setState(count + 1)",
-        "setCount(count + 1)",
-        "updateState({count: count + 1})"
-      ],
-      "correctAnswer": 2,
-      "explanation": "In functional components with hooks, you use the setter function returned by useState. If you have `const [count, setCount] = useState(0)`, then `setCount(count + 1)` is the correct way to update the state.",
-      "tags": ["react", "hooks", "state"]
-    },
-    {
-      "id": "mcq_003",
-      "category": "Data Structures",
+      "category": "Code Output",
       "difficulty": "easy",
-      "timeLimit": 60,
-      "question": "What is the time complexity of accessing an element by index in an array?",
+      "question": "What will be the output?\n\n```\narr = [1, 2, 3, 4, 5]\nfor i in range(len(arr)-1, -1, -1):\n    print(arr[i], end=' ')\n```",
       "options": [
-        "O(n)",
-        "O(log n)",
-        "O(1)",
-        "O(n²)"
-      ],
-      "correctAnswer": 2,
-      "explanation": "Array access by index is O(1) or constant time because arrays store elements in contiguous memory locations, allowing direct calculation of memory address using the index.",
-      "tags": ["data-structures", "arrays", "time-complexity"]
-    },
-    {
-      "id": "mcq_004",
-      "category": "Algorithms",
-      "difficulty": "medium",
-      "timeLimit": 120,
-      "question": "Which sorting algorithm has the best average-case time complexity?",
-      "options": [
-        "Bubble Sort - O(n²)",
-        "Merge Sort - O(n log n)",
-        "Selection Sort - O(n²)",
-        "Insertion Sort - O(n²)"
-      ],
-      "correctAnswer": 1,
-      "explanation": "Merge Sort has O(n log n) time complexity in all cases (best, average, and worst), making it more efficient than the O(n²) algorithms listed. Other efficient algorithms include Quick Sort (average O(n log n)) and Heap Sort (O(n log n)).",
-      "tags": ["algorithms", "sorting", "time-complexity"]
-    },
-    {
-      "id": "mcq_005",
-      "category": "Database",
-      "difficulty": "medium",
-      "timeLimit": 90,
-      "question": "In SQL, which of the following statements about INNER JOIN is correct?",
-      "options": [
-        "Returns all rows from both tables",
-        "Returns only matching rows from both tables",
-        "Returns all rows from left table and matching rows from right table",
-        "Returns all rows from right table and matching rows from left table"
-      ],
-      "correctAnswer": 1,
-      "explanation": "INNER JOIN returns only the rows that have matching values in both tables. It excludes rows that don't have matches in either table.",
-      "tags": ["sql", "joins", "database"]
-    },
-    {
-      "id": "mcq_006",
-      "category": "System Design",
-      "difficulty": "hard",
-      "timeLimit": 180,
-      "question": "Which of the following is NOT a benefit of using a Content Delivery Network (CDN)?",
-      "options": [
-        "Reduced latency for users",
-        "Decreased server load",
-        "Improved data consistency",
-        "Better availability and redundancy"
-      ],
-      "correctAnswer": 2,
-      "explanation": "CDNs can actually create data consistency challenges because content is distributed across multiple servers. The other options are genuine benefits: CDNs reduce latency by serving content from geographically closer servers, decrease origin server load, and improve availability through redundancy.",
-      "tags": ["system-design", "cdn", "distributed-systems"]
-    },
-    {
-      "id": "mcq_007",
-      "category": "Python",
-      "difficulty": "easy",
-      "timeLimit": 60,
-      "question": "What will be the output of the following Python code?\n\n```python\nlist1 = [1, 2, 3]\nlist2 = list1\nlist2.append(4)\nprint(list1)\n```",
-      "options": [
-        "[1, 2, 3]",
-        "[1, 2, 3, 4]",
-        "[4]",
+        "1 2 3 4 5",
+        "5 4 3 2 1",
+        "4 3 2 1 0",
         "Error"
       ],
       "correctAnswer": 1,
-      "explanation": "In Python, `list2 = list1` creates a reference to the same list object, not a copy. When you append to list2, you're modifying the same object that list1 references, so both variables will show [1, 2, 3, 4].",
-      "tags": ["python", "lists", "references"]
+      "explanation": "The loop iterates backwards from index 4 to 0, printing elements in reverse order: 5 4 3 2 1.",
+      "tags": ["code-output", "arrays", "loops"]
+    },
+    {
+      "id": "mcq_003",
+      "category": "Code Output",
+      "difficulty": "medium",
+      "question": "What is the output?\n\n```\nfunction mystery(n) {\n    if (n <= 1) return n;\n    return mystery(n-1) + mystery(n-2);\n}\nprint(mystery(5));\n```",
+      "options": [
+        "5",
+        "8",
+        "13",
+        "21"
+      ],
+      "correctAnswer": 0,
+      "explanation": "This is the Fibonacci sequence. mystery(5) = mystery(4) + mystery(3) = 5 + 3 = 8.",
+      "tags": ["code-output", "recursion", "algorithms"]
+    },
+    {
+      "id": "mcq_004",
+      "category": "Code Output",
+      "difficulty": "medium",
+      "question": "What will be printed?\n\n```\nmap = {}\nmap['a'] = 1\nmap['b'] = 2\nmap['a'] = 3\nprint(len(map))\n```",
+      "options": [
+        "1",
+        "2",
+        "3",
+        "Error"
+      ],
+      "correctAnswer": 1,
+      "explanation": "Maps store unique keys. 'a' is overwritten, so the map has 2 keys: 'a' and 'b'.",
+      "tags": ["code-output", "maps", "data-structures"]
+    },
+    {
+      "id": "mcq_005",
+      "category": "Code Output",
+      "difficulty": "easy",
+      "question": "What is the output?\n\n```\nstack = []\nstack.push(1)\nstack.push(2)\nstack.pop()\nstack.push(3)\nprint(stack.pop())\n```",
+      "options": [
+        "1",
+        "2",
+        "3",
+        "None"
+      ],
+      "correctAnswer": 2,
+      "explanation": "Stack follows LIFO. Push 1, push 2, pop 2, push 3, pop 3. Output is 3.",
+      "tags": ["code-output", "stacks", "data-structures"]
+    },
+    {
+      "id": "mcq_007",
+      "category": "Code Output",
+      "difficulty": "medium",
+      "question": "What is the output?\n\n```\ncount = 0\nfor i in range(3):\n    for j in range(2):\n        count += 1\nprint(count)\n```",
+      "options": [
+        "3",
+        "5",
+        "6",
+        "9"
+      ],
+      "correctAnswer": 2,
+      "explanation": "Outer loop runs 3 times (i=0,1,2), inner loop runs 2 times each. Total iterations = 3 × 2 = 6.",
+      "tags": ["code-output", "nested-loops"]
     },
     {
       "id": "mcq_008",
-      "category": "Networking",
-      "difficulty": "medium",
-      "timeLimit": 90,
-      "question": "What is the main difference between HTTP and HTTPS?",
+      "category": "Code Output",
+      "difficulty": "easy",
+      "question": "What will be the output?\n\n```\nstr = \"hello\"\nresult = \"\"\nfor i in range(len(str)-1, -1, -1):\n    result += str[i]\nprint(result)\n```",
       "options": [
-        "HTTPS is faster than HTTP",
-        "HTTPS uses encryption while HTTP does not",
-        "HTTP supports more methods than HTTPS",
-        "HTTPS works only with specific browsers"
+        "hello",
+        "olleh",
+        "hell",
+        "Error"
       ],
       "correctAnswer": 1,
-      "explanation": "HTTPS (HTTP Secure) is HTTP with encryption. It uses SSL/TLS protocols to encrypt data transmitted between the client and server, providing security, data integrity, and authentication.",
-      "tags": ["networking", "http", "security"]
+      "explanation": "The loop reverses the string by iterating backwards, resulting in 'olleh'.",
+      "tags": ["code-output", "strings", "loops"]
     },
     {
       "id": "mcq_009",
-      "category": "Object-Oriented Programming",
-      "difficulty": "medium",
-      "timeLimit": 120,
-      "question": "Which OOP principle is demonstrated by the ability of different classes to respond to the same method call in their own way?",
+      "category": "OOP",
+      "difficulty": "easy",
+      "question": "Which OOP principle allows a class to inherit properties and methods from another class?",
       "options": [
         "Encapsulation",
         "Inheritance",
         "Polymorphism",
         "Abstraction"
       ],
-      "correctAnswer": 2,
-      "explanation": "Polymorphism allows objects of different classes to be treated as objects of a common base class, while each class can provide its own implementation of methods. This enables the same interface to be used for different underlying data types.",
-      "tags": ["oop", "polymorphism", "design-principles"]
+      "correctAnswer": 1,
+      "explanation": "Inheritance allows a class to inherit attributes and methods from a parent class, promoting code reuse and establishing a hierarchical relationship.",
+      "tags": ["oop", "inheritance"]
     },
     {
       "id": "mcq_010",
-      "category": "Web Development",
-      "difficulty": "easy",
-      "timeLimit": 60,
-      "question": "Which HTTP status code indicates that a resource was successfully created?",
+      "category": "OOP",
+      "difficulty": "medium",
+      "question": "What is the main benefit of encapsulation in object-oriented programming?",
       "options": [
-        "200 OK",
-        "201 Created",
-        "204 No Content",
-        "301 Moved Permanently"
+        "Faster code execution",
+        "Data hiding and preventing unauthorized access",
+        "Automatic memory management",
+        "Support for multiple inheritance"
       ],
       "correctAnswer": 1,
-      "explanation": "HTTP status code 201 Created indicates that the request has been fulfilled and has resulted in one or more new resources being created. It's commonly returned after successful POST requests.",
-      "tags": ["web-development", "http", "status-codes"]
+      "explanation": "Encapsulation bundles data and methods together and restricts direct access to internal data, ensuring data integrity and security.",
+      "tags": ["oop", "encapsulation"]
+    },
+    {
+      "id": "mcq_011",
+      "category": "OOP",
+      "difficulty": "medium",
+      "question": "Which concept allows different classes to be treated as instances of the same class through a common interface?",
+      "options": [
+        "Inheritance",
+        "Polymorphism",
+        "Abstraction",
+        "Encapsulation"
+      ],
+      "correctAnswer": 1,
+      "explanation": "Polymorphism allows objects of different classes to be treated uniformly through a common interface, enabling method overriding and dynamic method dispatch.",
+      "tags": ["oop", "polymorphism"]
+    },
+    {
+      "id": "mcq_012",
+      "category": "OOP",
+      "difficulty": "easy",
+      "question": "What is an abstract class?",
+      "options": [
+        "A class that cannot be instantiated and may contain abstract methods",
+        "A class with no methods",
+        "A class that inherits from multiple parent classes",
+        "A class that only contains static methods"
+      ],
+      "correctAnswer": 0,
+      "explanation": "An abstract class serves as a template for other classes and cannot be instantiated directly. It may contain abstract methods that must be implemented by subclasses.",
+      "tags": ["oop", "abstraction"]
+    },
+    {
+      "id": "mcq_013",
+      "category": "AIML/OS/CN",
+      "difficulty": "easy",
+      "question": "What does CPU stand for in operating systems?",
+      "options": [
+        "Computer Processing Unit",
+        "Central Processing Unit",
+        "Central Program Unit",
+        "Computer Program Unit"
+      ],
+      "correctAnswer": 1,
+      "explanation": "CPU stands for Central Processing Unit, which is the primary component of a computer that executes instructions and performs calculations.",
+      "tags": ["operating-systems", "basics"]
+    },
+    {
+      "id": "mcq_014",
+      "category": "AIML/OS/CN",
+      "difficulty": "easy",
+      "question": "What is the primary purpose of a router in computer networks?",
+      "options": [
+        "To connect devices in the same network",
+        "To forward data packets between different networks",
+        "To amplify network signals",
+        "To provide wireless connectivity"
+      ],
+      "correctAnswer": 1,
+      "explanation": "A router is a networking device that forwards data packets between computer networks, making routing decisions based on network addresses.",
+      "tags": ["computer-networks", "routing"]
+    },
+    {
+      "id": "mcq_015",
+      "category": "AIML/OS/CN",
+      "difficulty": "medium",
+      "question": "What is machine learning?",
+      "options": [
+        "A type of computer hardware",
+        "A subset of artificial intelligence that enables systems to learn from data",
+        "A programming language",
+        "A database management system"
+      ],
+      "correctAnswer": 1,
+      "explanation": "Machine learning is a subset of artificial intelligence that enables systems to automatically learn and improve from experience without being explicitly programmed.",
+      "tags": ["artificial-intelligence", "machine-learning"]
+    },
+    {
+      "id": "mcq_016",
+      "category": "AIML/OS/CN",
+      "difficulty": "easy",
+      "question": "What does TCP stand for in networking?",
+      "options": [
+        "Transmission Control Protocol",
+        "Transfer Control Protocol",
+        "Transmission Communication Protocol",
+        "Transfer Communication Protocol"
+      ],
+      "correctAnswer": 0,
+      "explanation": "TCP stands for Transmission Control Protocol, a connection-oriented protocol that ensures reliable data transmission over networks.",
+      "tags": ["computer-networks", "protocols"]
+    },
+    {
+      "id": "mcq_017",
+      "category": "AIML/OS/CN",
+      "difficulty": "medium",
+      "question": "What is the purpose of virtual memory in operating systems?",
+      "options": [
+        "To increase physical RAM",
+        "To allow programs to use more memory than physically available",
+        "To speed up CPU processing",
+        "To store permanent data"
+      ],
+      "correctAnswer": 1,
+      "explanation": "Virtual memory allows the operating system to use disk storage as an extension of RAM, enabling programs to use more memory than physically available.",
+      "tags": ["operating-systems", "memory-management"]
+    },
+    {
+      "id": "mcq_018",
+      "category": "AIML/OS/CN",
+      "difficulty": "medium",
+      "question": "What is supervised learning in machine learning?",
+      "options": [
+        "Learning without any data",
+        "Learning from labeled training data",
+        "Learning from unlabeled data",
+        "Learning without algorithms"
+      ],
+      "correctAnswer": 1,
+      "explanation": "Supervised learning is a type of machine learning where the algorithm learns from labeled training data, with both input and desired output provided.",
+      "tags": ["machine-learning", "supervised-learning"]
+    },
+    {
+      "id": "mcq_019",
+      "category": "Mental Ability",
+      "difficulty": "medium",
+      "question": "If all roses are flowers, and some flowers are red, which of the following must be true?",
+      "options": [
+        "All roses are red",
+        "Some roses are red",
+        "All red things are roses",
+        "None of the above"
+      ],
+      "correctAnswer": 3,
+      "explanation": "We cannot conclude that some roses are red. All roses are flowers, and some flowers are red, but those red flowers might not be roses. We cannot determine that any roses are red.",
+      "tags": ["logical-reasoning", "syllogism"]
+    },
+    {
+      "id": "mcq_020",
+      "category": "Mental Ability",
+      "difficulty": "medium",
+      "question": "Complete the sequence: 2, 6, 12, 20, 30, ?",
+      "options": [
+        "40",
+        "42",
+        "44",
+        "46"
+      ],
+      "correctAnswer": 1,
+      "explanation": "The pattern is: 1×2=2, 2×3=6, 3×4=12, 4×5=20, 5×6=30, so next is 6×7=42.",
+      "tags": ["logical-reasoning", "sequences"]
+    },
+    {
+      "id": "mcq_021",
+      "category": "Mental Ability",
+      "difficulty": "easy",
+      "question": "If a train travels 120 km in 2 hours, how long will it take to travel 300 km at the same speed?",
+      "options": [
+        "4 hours",
+        "5 hours",
+        "6 hours",
+        "7 hours"
+      ],
+      "correctAnswer": 1,
+      "explanation": "Speed = 120 km / 2 hours = 60 km/h. Time for 300 km = 300 km / 60 km/h = 5 hours.",
+      "tags": ["logical-reasoning", "mathematics"]
     }
   ],
   "testConfig": {
-    "totalQuestions": 10,
-    "timePerQuestion": 90,
-    "totalTimeLimit": 900,
+    "totalQuestions": 20,
+    "timePerQuestion": 30,
+    "totalTimeLimit": 600,
     "passingScore": 70,
     "categories": [
-      "JavaScript",
-      "React", 
-      "Python",
-      "Data Structures",
-      "Algorithms",
-      "Database",
-      "System Design",
-      "Networking",
-      "Object-Oriented Programming",
-      "Web Development"
+      "Code Output",
+      "OOP",
+      "AIML/OS/CN",
+      "Mental Ability"
     ],
     "difficultyDistribution": {
-      "easy": 30,
+      "easy": 40,
       "medium": 50,
-      "hard": 20
+      "hard": 10
     }
   }
 }

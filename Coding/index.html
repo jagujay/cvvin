@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Code Judge</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/material-darker.min.css">
+    <style>
+        body { font-family: sans-serif; display: flex; gap: 20px; padding: 20px; }
+        .problem-pane, .solution-pane { flex: 1; }
+        .CodeMirror { border: 1px solid #ccc; height: 400px; font-size: 16px; }
+        #result { background-color: #f4f4f4; border: 1px solid #ccc; padding: 10px; min-height: 50px; white-space: pre-wrap; }
+        .accepted { color: green; font-weight: bold; }
+        .wrong-answer { color: red; font-weight: bold; }
+        .button-container { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="problem-pane">
+        <h2 id="problem-title"></h2>
+        <p id="problem-description"></p>
+    </div>
+    <div class="solution-pane">
+        <div class="top-bar">
+            <h2>Solution</h2>
+            <select id="languageSelector" onchange="updateBoilerplate()">
+                <option value="python">Python</option>
+                <option value="javascript">JavaScript</option>
+                <option value="c">C</option>
+                <option value="cpp">C++</option>
+                <option value="java">Java</option>
+            </select>
+        </div>
+        <textarea id="codeInput"></textarea>
+        <div class="button-container">
+            <button id="submitBtn" onclick="submitCode()">Submit Code</button>
+            <button id="resetBtn" onclick="resetCode()">Reset</button>
+            <span id="loader" style="display: none;">Judging...</span>
+        </div>
+        <h3>Result:</h3>
+        <pre id="result"></pre>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/clike/clike.min.js"></script>
+
+    <script>
+        let editor;
+        // NEW: Boilerplate code for all languages
+        const boilerplates = {
+            python: `import sys\n\ndef solve():\n    target = int(sys.stdin.readline())\n    nums = [int(n) for n in sys.stdin.readline().split(',')]\n    # Your logic here\n\nsolve()`,
+            javascript: `const readline = require('readline');\n\nconst rl = readline.createInterface({\n  input: process.stdin,\n  output: process.stdout,\n  terminal: false\n});\n\nlet lines = [];\nrl.on('line', line => lines.push(line));\n\nrl.on('close', () => {\n    const target = parseInt(lines[0]);\n    const nums = lines[1].split(',').map(Number);\n    // Your logic here\n});`,
+            c: `#include <stdio.h>\n\nint main() {\n    // Your C code here\n    return 0;\n}`,
+            cpp: `#include <iostream>\n#include <vector>\n#include <string>\n\nint main() {\n    // Your C++ code here\n    return 0;\n}`,
+            java: `import java.util.Scanner;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        // Your Java code here\n    }\n}`
+        };
+
+        // NEW: Function to update editor content and mode
+        function updateBoilerplate() {
+            const language = document.getElementById('languageSelector').value;
+            editor.setValue(boilerplates[language]);
+            const modeMap = {
+                python: 'python',
+                javascript: 'javascript',
+                c: 'text/x-csrc',
+                cpp: 'text/x-c++src',
+                java: 'text/x-java'
+            };
+            editor.setOption("mode", modeMap[language]);
+        }
+
+        window.onload = async () => {
+            const response = await fetch('/problem');
+            const problem = await response.json();
+            document.getElementById('problem-title').textContent = problem.title;
+            document.getElementById('problem-description').textContent = problem.description;
+
+            editor = CodeMirror.fromTextArea(document.getElementById('codeInput'), {
+                theme: 'material-darker',
+                lineNumbers: true,
+                indentUnit: 4,
+                smartIndent: true
+            });
+            updateBoilerplate(); // Set initial boilerplate
+        };
+
+        function resetCode() {
+            if (confirm('Are you sure you want to reset your code?')) {
+                updateBoilerplate();
+            }
+        }
+
+        async function submitCode() {
+            const code = editor.getValue();
+            // MODIFIED: Get selected language
+            const language = document.getElementById('languageSelector').value;
+            const resultArea = document.getElementById('result');
+            const loader = document.getElementById('loader');
+            const submitBtn = document.getElementById('submitBtn');
+            const resetBtn = document.getElementById('resetBtn');
+
+            loader.style.display = 'inline';
+            submitBtn.disabled = true;
+            resetBtn.disabled = true;
+            resultArea.textContent = '';
+            resultArea.className = '';
+
+            const response = await fetch('/execute', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                // MODIFIED: Send language to backend
+                body: JSON.stringify({ code, language })
+            });
+            const result = await response.json();
+
+            loader.style.display = 'none';
+            submitBtn.disabled = false;
+            resetBtn.disabled = false;
+
+            if (result.status === 'Accepted') {
+                resultArea.textContent = '✅ Accepted';
+                resultArea.className = 'accepted';
+            } else if (result.status === 'Wrong Answer') {
+                resultArea.textContent = `❌ Wrong Answer on Test Case ${result.case}\n\nInput:\n${result.input}\n\nYour Output:\n${result.output}\n\nExpected Output:\n${result.expected}`;
+                resultArea.className = 'wrong-answer';
+            } else {
+                resultArea.textContent = 'An error occurred:\n' + (result.error || result.message);
+                resultArea.className = 'wrong-answer';
+            }
+        }
+    </script>
+</body>
+</html>

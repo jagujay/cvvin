@@ -17,13 +17,15 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/layout/Layout";
-import userData from "@/mock/user.json";
+import { useAuth } from "@/contexts/AuthContext";
+import { consolidatedAPI } from "@/services/consolidatedAPI";
+import { wrapCodeForExecution } from "@/utils/code-wrapper";
 import codingData from "@/mock/coding.json";
 
 const CodingChallenge = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const user = userData.completedProfile;
+  const { currentUser } = useAuth();
   
   const [code, setCode] = useState("");
   const [language, setLanguage] = useState("javascript");
@@ -31,6 +33,7 @@ const CodingChallenge = () => {
   const [testResults, setTestResults] = useState<any>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submissionStatus, setSubmissionStatus] = useState<string | null>(null);
 
   const question = codingData.defaultChallenge; // Using default challenge
 
@@ -63,7 +66,7 @@ const CodingChallenge = () => {
     }
   };
 
-  const handleRunCode = () => {
+  const handleRunCode = async () => {
     if (!code.trim()) {
       toast({
         variant: "destructive",
@@ -73,44 +76,130 @@ const CodingChallenge = () => {
       return;
     }
 
-    setIsRunning(true);
-
-    // Simulate code execution using test cases from mock data
-    setTimeout(() => {
-      const visibleTests = question.testCases.filter(test => !test.hidden);
-      const passedTests = Math.floor(Math.random() * visibleTests.length) + 1; // Random for demo
-      
-      setTestResults({
-        passed: passedTests,
-        total: visibleTests.length,
-        cases: visibleTests.map((testCase, index) => ({
-          input: JSON.stringify(testCase.input),
-          expected: JSON.stringify(testCase.expectedOutput),
-          actual: index < passedTests ? JSON.stringify(testCase.expectedOutput) : "null",
-          passed: index < passedTests
-        })),
-        executionTime: "2ms",
-        memoryUsage: "38.4MB"
+    if (!currentUser) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Required",
+        description: "Please log in to execute code."
       });
-      setIsRunning(false);
+      return;
+    }
+
+    setIsRunning(true);
+    setTestResults(null);
+
+    try {
+      // Get visible test cases
+      const visibleTests = question.testCases.filter(test => !test.hidden);
+      
+      // Wrap code for execution (convert LeetCode format to stdin/stdout)
+      const wrappedCode = wrapCodeForExecution(code, language);
+      
+      // Execute code against test cases
+      const result = await consolidatedAPI.executeCode(
+        currentUser,
+        wrappedCode,
+        language,
+        visibleTests
+      );
+
+      setTestResults({
+        passed: result.passed,
+        total: result.total,
+        cases: result.cases.map((testCase: any) => ({
+          caseNumber: testCase.caseNumber,
+          input: testCase.input,
+          expected: testCase.expected,
+          actual: testCase.actual,
+          passed: testCase.passed,
+          error: testCase.error,
+          hidden: testCase.hidden
+        })),
+        allPassed: result.allPassed,
+        status: result.status
+      });
+
       toast({
         title: "Code Executed",
-        description: `${passedTests} out of ${visibleTests.length} test cases passed.`
+        description: result.allPassed 
+          ? `✅ All ${result.total} test cases passed!`
+          : `${result.passed} out of ${result.total} test cases passed.`
       });
-    }, 2000);
+    } catch (error: any) {
+      console.error('Code execution error:', error);
+      toast({
+        variant: "destructive",
+        title: "Execution Failed",
+        description: error.message || "Failed to execute code. Please check your code and try again."
+      });
+    } finally {
+      setIsRunning(false);
+    }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!code.trim()) {
+      toast({
+        variant: "destructive",
+        title: "No Code",
+        description: "Please write code before submitting."
+      });
+      return;
+    }
+
+    if (!currentUser) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Required",
+        description: "Please log in to submit code."
+      });
+      return;
+    }
+
     setIsSubmitted(true);
-    toast({
-      title: "Solution Submitted!",
-      description: "Your coding challenge has been completed."
-    });
-    
-    // Navigate to feedback or next section
-    setTimeout(() => {
-      navigate("/feedback");
-    }, 2000);
+    setIsRunning(true);
+
+    try {
+      // Run all test cases (including hidden ones)
+      const wrappedCode = wrapCodeForExecution(code, language);
+      const result = await consolidatedAPI.executeCode(
+        currentUser,
+        wrappedCode,
+        language,
+        question.testCases
+      );
+
+      setSubmissionStatus(result.status);
+      setTestResults({
+        passed: result.passed,
+        total: result.total,
+        cases: result.cases,
+        allPassed: result.allPassed,
+        status: result.status
+      });
+
+      if (result.allPassed) {
+        toast({
+          title: "✅ Accepted!",
+          description: `All ${result.total} test cases passed. Great job!`
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "❌ Wrong Answer",
+          description: `${result.passed} out of ${result.total} test cases passed.`
+        });
+      }
+    } catch (error: any) {
+      console.error('Submission error:', error);
+      toast({
+        variant: "destructive",
+        title: "Submission Failed",
+        description: error.message || "Failed to submit code. Please try again."
+      });
+    } finally {
+      setIsRunning(false);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -121,8 +210,11 @@ const CodingChallenge = () => {
 
   return (
     <Layout 
-      isAuthenticated={true} 
-      user={{ fullName: user.fullName, profilePicture: user.profilePicture }}
+      isAuthenticated={!!currentUser} 
+      user={{ 
+        fullName: currentUser?.displayName || 'User', 
+        profilePicture: currentUser?.photoURL 
+      }}
       showFooter={false}
     >
       <div className="min-h-screen bg-background">
@@ -290,42 +382,55 @@ const CodingChallenge = () => {
                 {testResults && (
                   <Card className="border bg-muted/50">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        <Terminal className="w-4 h-4" />
-                        Test Results
-                      </CardTitle>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <Terminal className="w-4 h-4" />
+                          Test Results
+                        </CardTitle>
+                        {submissionStatus && (
+                          <Badge 
+                            variant={submissionStatus === 'Accepted' ? "default" : "destructive"}
+                            className="text-xs"
+                          >
+                            {submissionStatus}
+                          </Badge>
+                        )}
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div className="flex items-center justify-between text-sm">
                         <span>Test Cases Passed:</span>
-                        <Badge variant={testResults.passed === testResults.total ? "default" : "secondary"}>
+                        <Badge variant={testResults.allPassed ? "default" : "secondary"}>
                           {testResults.passed}/{testResults.total}
                         </Badge>
                       </div>
                       
-                      <div className="space-y-2">
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
                         {testResults.cases.map((testCase: any, index: number) => (
-                          <div key={index} className="flex items-start gap-2 text-xs">
+                          <div key={index} className="flex items-start gap-2 text-xs p-2 rounded border">
                             {testCase.passed ? (
-                              <CheckCircle2 className="w-3 h-3 text-green-600 mt-0.5 flex-shrink-0" />
+                              <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
                             ) : (
-                              <XCircle className="w-3 h-3 text-red-600 mt-0.5 flex-shrink-0" />
+                              <XCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
                             )}
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">
-                                Input: {testCase.input}
+                              <p className="font-medium mb-1">
+                                Test Case {testCase.caseNumber}
+                                {testCase.hidden && <Badge variant="outline" className="ml-2 text-xs">Hidden</Badge>}
                               </p>
-                              <p className="text-muted-foreground">
-                                Expected: {testCase.expected} | Got: {testCase.actual}
-                              </p>
+                              <div className="space-y-1 text-muted-foreground">
+                                <p><span className="font-medium">Input:</span> {testCase.input}</p>
+                                <p><span className="font-medium">Expected:</span> {testCase.expected}</p>
+                                <p><span className="font-medium">Your Output:</span> {testCase.actual}</p>
+                                {testCase.error && (
+                                  <p className="text-red-600 font-mono text-xs bg-red-50 p-1 rounded">
+                                    Error: {testCase.error}
+                                  </p>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}
-                      </div>
-
-                      <div className="flex justify-between text-xs text-muted-foreground pt-2 border-t">
-                        <span>Runtime: {testResults.executionTime}</span>
-                        <span>Memory: {testResults.memoryUsage}</span>
                       </div>
                     </CardContent>
                   </Card>

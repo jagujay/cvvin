@@ -184,8 +184,8 @@
       "Only one valid answer exists."
     ],
     "starterCode": {
-      "javascript": "/**\n * @param {number[]} nums\n * @param {number} target\n * @return {number[]}\n */\nvar twoSum = function(nums, target) {\n    // Write your solution here\n    \n};",
-      "python": "class Solution:\n    def twoSum(self, nums: List[int], target: int) -> List[int]:\n        # Write your solution here\n        pass"
+      "javascript": "/**\n * @param {number[]} nums\n * @param {number} target\n * @return {number[]}\n */\nvar twoSum = function(nums, target) {\n    // Write your solution here\n    // Example: Use a hash map to find pairs\n    const map = new Map();\n    for (let i = 0; i < nums.length; i++) {\n        const complement = target - nums[i];\n        if (map.has(complement)) {\n            return [map.get(complement), i];\n        }\n        map.set(nums[i], i);\n    }\n    return [];\n};",
+      "python": "class Solution:\n    def twoSum(self, nums, target):\n        # Write your solution here\n        # Example: Use a dictionary to find pairs\n        map = {}\n        for i, num in enumerate(nums):\n            complement = target - num\n            if complement in map:\n                return [map[complement], i]\n            map[num] = i\n        return []"
     },
     "testCases": [
       {
@@ -195,6 +195,30 @@
         },
         "expectedOutput": [0, 1],
         "hidden": false
+      },
+      {
+        "input": {
+          "nums": [3, 2, 4],
+          "target": 6
+        },
+        "expectedOutput": [1, 2],
+        "hidden": false
+      },
+      {
+        "input": {
+          "nums": [3, 3],
+          "target": 6
+        },
+        "expectedOutput": [0, 1],
+        "hidden": false
+      },
+      {
+        "input": {
+          "nums": [1, 2, 3, 4, 5],
+          "target": 9
+        },
+        "expectedOutput": [3, 4],
+        "hidden": true
       }
     ],
     "hints": [

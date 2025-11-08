@@ -37,6 +37,7 @@ const ResumeAnalysis = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
   const [uploadedFile, setUploadedFile] = useState<FileUploadResponse | null>(null);
+  const [resumeFileInfo, setResumeFileInfo] = useState<any | null>(null);
   const { toast } = useToast();
   
   // Check if this is part of full mock flow
@@ -62,6 +63,15 @@ const ResumeAnalysis = () => {
         } catch (error) {
           // Resume data might not exist yet, that's okay
           console.log('No resume data found yet');
+        }
+        
+        // Try to load resume file info (for fileId)
+        try {
+          const resumeFile = await consolidatedAPI.getResumeFile(currentUser);
+          setResumeFileInfo(resumeFile);
+        } catch (error) {
+          // Resume file might not exist yet, that's okay
+          console.log('No resume file found yet');
         }
         
         // Auto-populate job description if this is from full mock
@@ -138,6 +148,15 @@ Salary: $120,000 - $160,000`);
       const uploadResult = await consolidatedAPI.uploadFile(currentUser, file);
       setUploadedFile(uploadResult);
       
+      // Refresh resume file info to get the fileId
+      try {
+        const resumeFile = await consolidatedAPI.getResumeFile(currentUser);
+        setResumeFileInfo(resumeFile);
+      } catch (error) {
+        // If getResumeFile fails, uploadedFile.fileId should still work
+        console.log('Could not refresh resume file info, but upload succeeded');
+      }
+      
       toast({
         title: "File Uploaded Successfully",
         description: `Resume "${file.name}" has been uploaded and is ready for analysis.`
@@ -187,13 +206,19 @@ Salary: $120,000 - $160,000`);
     setIsAnalyzing(true);
 
     try {
-      // For now, we'll use mock data since the analysis endpoint isn't implemented yet
-      // In the future, this would call: await consolidatedAPI.analyzeResume(currentUser, uploadedFile?.fileId, jobDescription);
+      // Get file ID from uploaded file, resume file info, or resume data
+      const fileId = uploadedFile?.fileId || resumeFileInfo?.id;
       
-      // Simulate API call with 2-second delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (!fileId) {
+        throw new Error('No file ID available. Please upload a resume first.');
+      }
       
-      setAnalysisResult(resumeAnalysisData.analysis);
+      // Call the real analysis API
+      const result = await consolidatedAPI.analyzeResume(currentUser, fileId, jobDescription);
+      
+      // The API returns data directly, but we need to wrap it in the 'analysis' structure
+      // to match what the component expects
+      setAnalysisResult(result);
       
       toast({
         title: "Analysis Complete!",

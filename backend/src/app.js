@@ -17,6 +17,8 @@ const userRoutes = require('./routes/user.routes');
 const fileRoutes = require('./routes/file.routes');
 const imageRoutes = require('./routes/image.routes');
 const healthRoutes = require('./routes/health.routes');
+const analysisRoutes = require('./routes/analysis.routes');
+const codeExecutionRoutes = require('./routes/code-execution.routes');
 
 /**
  * Create and configure Express application
@@ -44,6 +46,8 @@ const createApp = () => {
   app.use('/api/users', userRoutes);
   app.use('/api/files', fileRoutes);
   app.use('/api/images', imageRoutes);
+  app.use('/api/analysis', analysisRoutes);
+  app.use('/api/code', codeExecutionRoutes);
 
   // Error handling middleware (must be last)
   app.use(notFoundHandler);

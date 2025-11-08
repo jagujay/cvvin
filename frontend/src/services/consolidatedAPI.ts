@@ -391,43 +391,49 @@ class ConsolidatedAPI {
     return result.data;
   }
 
-  // Resume Analysis (placeholder for future implementation)
-  async analyzeResume(user: User, fileId: string, jobDescription: string): Promise<AnalysisResult> {
-    // For now, return mock data. This can be implemented later with actual analysis logic
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          overallScore: 85,
-          matchPercentage: 78,
-          processingTime: 2.5,
-          jobDescription: {
-            title: "Software Engineer",
-            requirements: jobDescription.split('\n').filter(line => line.trim()),
-            responsibilities: []
-          },
-          analysis: {
-            strengths: [
-              "Strong technical skills in JavaScript and React",
-              "Experience with modern development tools",
-              "Good problem-solving abilities"
-            ],
-            weaknesses: [
-              "Limited experience with backend technologies",
-              "Could improve testing knowledge"
-            ],
-            recommendations: [
-              "Consider learning Node.js and Express",
-              "Practice writing unit tests",
-              "Build more full-stack projects"
-            ],
-            skillMatch: {
-              matched: ["JavaScript", "React", "Git"],
-              missing: ["Node.js", "Python", "Docker"]
-            }
-          }
-        });
-      }, 2000);
+  // Resume Analysis
+  async analyzeResume(user: User, fileId: string, jobDescription: string): Promise<any> {
+    const headers = await this.getAuthHeaders(user);
+    const response = await fetch(`${BACKEND_BASE_URL}/api/analysis/resume`, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ fileId, jobDescription }),
     });
+    const result = await this.handleResponse<{ success: boolean; data: any }>(response);
+    return result.data;
+  }
+
+  // Code Execution
+  async executeCode(user: User, code: string, language: string, testCases: any[]): Promise<any> {
+    const headers = await this.getAuthHeaders(user);
+    const response = await fetch(`${BACKEND_BASE_URL}/api/code/execute`, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ code, language, testCases }),
+    });
+    const result = await this.handleResponse<{ success: boolean; data: any }>(response);
+    return result.data;
+  }
+
+  // Run Code (with custom input)
+  async runCode(user: User, code: string, language: string, input: string = ''): Promise<any> {
+    const headers = await this.getAuthHeaders(user);
+    const response = await fetch(`${BACKEND_BASE_URL}/api/code/run`, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ code, language, input }),
+    });
+    const result = await this.handleResponse<{ success: boolean; data: any }>(response);
+    return result.data;
   }
 }
 

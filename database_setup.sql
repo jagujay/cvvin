@@ -93,7 +93,8 @@ CREATE TABLE IF NOT EXISTS session_components (
     component_data JSONB NOT NULL,
     score INTEGER,
     completed_at TIMESTAMP,
-    feedback JSONB DEFAULT '{}'::jsonb
+    feedback JSONB DEFAULT '{}'::jsonb,
+    UNIQUE(session_id, component_type) -- Prevent duplicate components per session
 );
 
 -- Create indexes for performance
@@ -112,6 +113,7 @@ CREATE INDEX IF NOT EXISTS idx_interview_sessions_user_id ON interview_sessions(
 CREATE INDEX IF NOT EXISTS idx_interview_sessions_status ON interview_sessions(status);
 CREATE INDEX IF NOT EXISTS idx_interview_sessions_started_at ON interview_sessions(started_at);
 CREATE INDEX IF NOT EXISTS idx_session_components_session_id ON session_components(session_id);
+CREATE INDEX IF NOT EXISTS idx_session_components_type ON session_components(component_type);
 
 -- Create partial indexes for large files
 CREATE INDEX IF NOT EXISTS idx_files_large_files ON files(id) 
@@ -151,5 +153,7 @@ ON CONFLICT (firebase_uid) DO NOTHING;
 -- GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO cvvin_user;
 
 COMMIT;
+
+
 
 

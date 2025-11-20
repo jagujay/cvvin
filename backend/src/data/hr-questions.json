@@ -1,0 +1,1293 @@
+{
+  "questions": [
+    {
+      "id": "hr_001",
+      "category": "Weakness",
+      "question": "What are your greatest strengths?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_002",
+      "category": "Weakness",
+      "question": "What are your greatest weaknesses?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_003",
+      "category": "Motivation",
+      "question": "Why are you leaving (or did you leave) this position?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 120,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_004",
+      "category": "Motivation",
+      "question": "Why should I hire you?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_005",
+      "category": "General",
+      "question": "Aren’t you overqualified for this position?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_006",
+      "category": "General",
+      "question": "Where do you see yourself five years from now?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_007",
+      "category": "Motivation",
+      "question": "Why do you want to work at our company?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_008",
+      "category": "Goals",
+      "question": "What are your career options right now?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_009",
+      "category": "Motivation",
+      "question": "Why have you been out of work so long?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_010",
+      "category": "General",
+      "question": "What good books have you read lately?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_011",
+      "category": "General",
+      "question": "What are your outside interests?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_012",
+      "category": "General",
+      "question": "(minority, woman, etc)?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_013",
+      "category": "Company",
+      "question": "Would you lie for the company?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_014",
+      "category": "General",
+      "question": "Could you have done better in your last job?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_015",
+      "category": "General",
+      "question": "Can you work under pressure?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_016",
+      "category": "General",
+      "question": "What makes you angry?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_017",
+      "category": "Goals",
+      "question": "your career?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_018",
+      "category": "Motivation",
+      "question": "Who has inspired you in your life and why?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_019",
+      "category": "General",
+      "question": "days in any previous position?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_020",
+      "category": "General",
+      "question": "What changes would you make if you came on board?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_021",
+      "category": "General",
+      "question": "How do you feel about working nights and weekends?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 120,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_022",
+      "category": "General",
+      "question": "get both the job and the schedule you want?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_023",
+      "category": "General",
+      "question": "Are you willing to relocate or travel?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_024",
+      "category": "General",
+      "question": "offer over it?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_025",
+      "category": "Experience",
+      "question": "had experience firing many people?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_026",
+      "category": "Motivation",
+      "question": "Why have you had so many jobs?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_027",
+      "category": "General",
+      "question": "idea, but you think it stinks?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_028",
+      "category": "Weakness",
+      "question": "How could you have improved your career progress?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_029",
+      "category": "General",
+      "question": "was hurting your department?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_030",
+      "category": "Company",
+      "question": "hard switching to a new company?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_031",
+      "category": "General",
+      "question": "May I contact your present employer for a reference?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 120,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_032",
+      "category": "General",
+      "question": "But if you don’t cooperate, won’t you seem as if you’re trying to hide something?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 120,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_033",
+      "category": "Weakness",
+      "question": "Where could you use some improvement?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_034",
+      "category": "General",
+      "question": "What do you worry about?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_035",
+      "category": "General",
+      "question": "How many hours a week do you normally work?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_036",
+      "category": "Problem Solving",
+      "question": "What’s the most difficult part of being a (job title)?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 120,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_037",
+      "category": "Experience",
+      "question": "What was the toughest challenge you’ve ever faced?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 120,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_038",
+      "category": "General",
+      "question": "Have you consider starting your own business?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_039",
+      "category": "Goals",
+      "question": "What are your goals?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_040",
+      "category": "General",
+      "question": "What do you for when you hire people?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_041",
+      "category": "General",
+      "question": "Can the person do the work (qualifications)?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_042",
+      "category": "General",
+      "question": "Will the person do the work (motivation)?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_043",
+      "category": "Teamwork",
+      "question": "Will the person fit in (“our kind of team player”)?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 120,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_044",
+      "category": "Motivation",
+      "question": "stapler like this, why would you want one?  And in addition to that?  Any other reason?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 120,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_045",
+      "category": "General",
+      "question": "What was the toughest part of your last job?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_046",
+      "category": "General",
+      "question": "up to your own definition?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_047",
+      "category": "General",
+      "question": "any other controversial subject)?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_048",
+      "category": "General",
+      "question": "If you won $10 million lottery, would you still work?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 120,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    },
+    {
+      "id": "hr_049",
+      "category": "General",
+      "question": "promote someone from within?",
+      "followUps": [],
+      "tips": [],
+      "timeLimit": 90,
+      "rubric": {
+        "clarity": {
+          "weight": 25,
+          "description": "Clear communication and well-structured response"
+        },
+        "relevance": {
+          "weight": 30,
+          "description": "Response relevance to the question and context"
+        },
+        "confidence": {
+          "weight": 20,
+          "description": "Confidence and enthusiasm in delivery"
+        },
+        "professionalism": {
+          "weight": 25,
+          "description": "Professional tone and appropriate content"
+        }
+      }
+    }
+  ],
+  "categories": [
+    "Company",
+    "Experience",
+    "General",
+    "Goals",
+    "Motivation",
+    "Problem Solving",
+    "Teamwork",
+    "Weakness"
+  ],
+  "metadata": {
+    "totalQuestions": 49,
+    "source": "How To Answer the 64 Toughest Interview Questions.pdf",
+    "extractedAt": "2025-11-15T01:17:29.652714"
+  }
+}

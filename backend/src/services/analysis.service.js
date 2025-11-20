@@ -11,8 +11,8 @@ class AnalysisService {
   constructor() {
     // Path to Python script
     this.pythonScriptPath = path.join(__dirname, 'resume-analyzer', 'resume_analyzer.py');
-    // Timeout for analysis (60 seconds)
-    this.analysisTimeout = 60000;
+    // Timeout for analysis (120 seconds - increased for better reliability)
+    this.analysisTimeout = 120000;
   }
 
   /**
@@ -26,6 +26,97 @@ class AnalysisService {
       Logger.error('Python script not found', { path: this.pythonScriptPath });
       return false;
     }
+  }
+
+  /**
+   * Extract text from PDF file
+   * @param {string} pdfPath - Path to PDF file
+   * @returns {Promise<string>} Extracted text
+   */
+  async extractResumeText(pdfPath) {
+    return new Promise((resolve, reject) => {
+      // Use Python to extract text (reusing the extraction logic)
+      const extractScript = `
+import sys
+import fitz  # PyMuPDF
+
+def extract_text_from_pdf(pdf_path):
+    try:
+        doc = fitz.open(pdf_path)
+        text = ""
+        for page in doc:
+            text += page.get_text()
+        doc.close()
+        return text
+    except Exception as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return None
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("ERROR: Usage: python <script> <pdf_path>", file=sys.stderr)
+        sys.exit(1)
+    
+    pdf_path = sys.argv[1]
+    text = extract_text_from_pdf(pdf_path)
+    if text:
+        print(text)
+    else:
+        sys.exit(1)
+`;
+
+      // Resolve absolute path to PDF
+      let absolutePdfPath;
+      if (path.isAbsolute(pdfPath)) {
+        absolutePdfPath = pdfPath;
+      } else {
+        absolutePdfPath = path.join(process.cwd(), pdfPath.replace(/^\//, ''));
+      }
+
+      // Create a temporary Python script
+      const tempScriptPath = path.join(__dirname, 'resume-analyzer', 'extract_text_temp.py');
+      
+      fs.writeFile(tempScriptPath, extractScript)
+        .then(() => {
+          // Spawn Python process
+          const python = spawn('python', [tempScriptPath, absolutePdfPath], {
+            cwd: path.dirname(this.pythonScriptPath)
+          });
+
+          let stdout = '';
+          let stderr = '';
+
+          python.stdout.on('data', (data) => {
+            stdout += data.toString();
+          });
+
+          python.stderr.on('data', (data) => {
+            stderr += data.toString();
+          });
+
+          python.on('close', (code) => {
+            // Clean up temp script
+            fs.unlink(tempScriptPath).catch(() => {});
+            
+            if (code === 0) {
+              resolve(stdout.trim());
+            } else {
+              Logger.warn('Failed to extract text from PDF', { stderr });
+              resolve(''); // Return empty string instead of failing
+            }
+          });
+
+          python.on('error', (error) => {
+            fs.unlink(tempScriptPath).catch(() => {});
+            Logger.warn('Failed to spawn Python process for text extraction', { error: error.message });
+            resolve(''); // Return empty string instead of failing
+          });
+        })
+        .catch((error) => {
+          Logger.warn('Failed to create temp extraction script', { error: error.message });
+          resolve(''); // Return empty string instead of failing
+        });
+    });
   }
 
   /**
@@ -143,13 +234,20 @@ class AnalysisService {
         jdMatch: true,
         proficiency: skill.proficiency || 'Intermediate',
         yearsExperience: skill.yearsExperience || 0,
-        strength: skill.strength || 'medium'
+        strength: skill.strength || 'medium',
+        evidence: skill.evidence || ''
       }));
 
       const missingSkills = (ollamaResult.skillAnalysis?.missingSkills || []).map(skill => ({
         skill: typeof skill === 'string' ? skill : skill.name || skill,
         importance: skill.importance || 'medium',
         recommendation: skill.recommendation || `Consider learning ${typeof skill === 'string' ? skill : skill.name || skill}`
+      }));
+
+      const extraSkills = (ollamaResult.skillAnalysis?.extraSkills || []).map(skill => ({
+        skill: typeof skill === 'string' ? skill : skill.name || skill,
+        value: skill.value || 'Additional skill that may be valuable',
+        relevance: skill.relevance || 'medium'
       }));
 
       // Transform strengths
@@ -159,13 +257,14 @@ class AnalysisService {
         impact: strength.impact || 'medium'
       }));
 
-      // Transform recommendations
+      // Transform recommendations (beginner-friendly)
       const recommendations = (ollamaResult.suggestions || []).map((suggestion, index) => ({
         type: 'skill_development',
         title: typeof suggestion === 'string' ? `Recommendation ${index + 1}` : suggestion.title || 'Improvement',
         description: typeof suggestion === 'string' ? suggestion : suggestion.description || suggestion,
         priority: suggestion.priority || 'medium',
-        timeEstimate: suggestion.timeEstimate || '2-4 weeks'
+        timeEstimate: suggestion.timeEstimate || '2-4 weeks',
+        difficulty: suggestion.difficulty || 'beginner'
       }));
 
       // Calculate match percentage (use overallScore or estimate)
@@ -194,6 +293,7 @@ class AnalysisService {
         },
         matchedSkills: matchedSkills,
         missingSkills: missingSkills,
+        extraSkills: extraSkills,
         strengths: strengths,
         improvements: recommendations.map(rec => ({
           category: 'Skills Enhancement',
@@ -252,4 +352,3 @@ class AnalysisService {
 }
 
 module.exports = AnalysisService;
-

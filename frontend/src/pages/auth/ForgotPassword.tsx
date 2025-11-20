@@ -8,7 +8,7 @@ import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
-import logoImage from "@/assets/logo.png";
+import logoImage from "@/assets/Logo-NoBG-cropped.png";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -51,40 +51,42 @@ const ForgotPassword = () => {
   };
 
   return (
-    <Layout showFooter={false}>
-      <div className="min-h-[calc(100vh-80px)] flex items-center justify-center p-6 gradient-subtle">
-        <Card className="w-full max-w-md shadow-strong">
-          <CardHeader className="text-center pb-4">
-            <div className="flex justify-center mb-4">
-              <img src={logoImage} alt="CVVIN" className="h-12 w-auto" />
+    <Layout showFooter={false} showNavbar={false}>
+      <div className="min-h-screen flex items-center justify-center p-4 md:p-6 gradient-subtle">
+        <Card className="w-full max-w-md shadow-strong relative border-0 bg-card/95 backdrop-blur-sm">
+          <CardHeader className="text-center pb-6 pt-12 px-8">
+            <div className="flex justify-center mb-6">
+              <img src={logoImage} alt="CVVIN Logo" className="h-28 w-auto md:h-36 lg:h-44 transition-transform hover:scale-105" />
             </div>
-            <CardTitle className="text-2xl font-bold">Reset Your Password</CardTitle>
-            <p className="text-muted-foreground">
+            <CardTitle className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+              Reset Your Password
+            </CardTitle>
+            <p className="text-muted-foreground text-sm md:text-base">
               Enter your email address and we'll send you a reset code
             </p>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="email">Email Address</Label>
+          <CardContent className="px-8 pb-8">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="your.email@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1"
+                  className="h-11 transition-all focus:ring-2 focus:ring-primary/20"
                 />
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full h-11 text-base font-semibold shadow-medium hover:shadow-strong transition-all" disabled={isLoading}>
                 {isLoading ? "Sending..." : "Send Reset Code"}
               </Button>
 
-              <div className="text-center">
+              <div className="text-center pt-2">
                 <Link 
                   to="/auth" 
-                  className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-smooth"
+                  className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors underline-offset-4 hover:underline"
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back to Login

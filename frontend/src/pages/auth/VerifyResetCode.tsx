@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/layout/Layout";
-import logoImage from "@/assets/logo.png";
+import logoImage from "@/assets/Logo-NoBG-cropped.png";
 
 const VerifyResetCode = () => {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -81,23 +81,25 @@ const VerifyResetCode = () => {
   };
 
   return (
-    <Layout showFooter={false}>
-      <div className="min-h-[calc(100vh-80px)] flex items-center justify-center p-6 gradient-subtle">
-        <Card className="w-full max-w-md shadow-strong">
-          <CardHeader className="text-center pb-4">
-            <div className="flex justify-center mb-4">
-              <img src={logoImage} alt="CVVIN" className="h-12 w-auto" />
+    <Layout showFooter={false} showNavbar={false}>
+      <div className="min-h-screen flex items-center justify-center p-4 md:p-6 gradient-subtle">
+        <Card className="w-full max-w-md shadow-strong relative border-0 bg-card/95 backdrop-blur-sm">
+          <CardHeader className="text-center pb-6 pt-12 px-8">
+            <div className="flex justify-center mb-6">
+              <img src={logoImage} alt="CVVIN Logo" className="h-28 w-auto md:h-36 lg:h-44 transition-transform hover:scale-105" />
             </div>
-            <CardTitle className="text-2xl font-bold">Check Your Email</CardTitle>
-            <p className="text-muted-foreground">
+            <CardTitle className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+              Check Your Email
+            </CardTitle>
+            <p className="text-muted-foreground text-sm md:text-base mb-2">
               We've sent a 6-digit code to
             </p>
             <p className="text-sm font-medium text-primary">{email}</p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-8 pb-8">
             <form onSubmit={handleVerify} className="space-y-6">
               <div>
-                <div className="flex justify-center space-x-2">
+                <div className="flex justify-center space-x-3">
                   {otp.map((digit, index) => (
                     <Input
                       key={index}
@@ -108,20 +110,20 @@ const VerifyResetCode = () => {
                       value={digit}
                       onChange={(e) => handleInputChange(index, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(index, e)}
-                      className="w-12 h-12 text-center text-lg font-semibold"
+                      className="w-14 h-14 text-center text-xl font-semibold transition-all focus:ring-2 focus:ring-primary/20"
                     />
                   ))}
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full h-11 text-base font-semibold shadow-medium hover:shadow-strong transition-all" disabled={isLoading}>
                 {isLoading ? "Verifying..." : "Verify Code"}
               </Button>
 
-              <div className="text-center">
+              <div className="text-center pt-2">
                 <Link 
                   to="/auth/forgot-password" 
-                  className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-smooth"
+                  className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors underline-offset-4 hover:underline"
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back

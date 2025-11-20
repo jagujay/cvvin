@@ -16,8 +16,8 @@ class CodeExecutionService {
       fs.mkdirSync(this.tempDir, { recursive: true });
     }
     
-    // Execution timeout (5 seconds)
-    this.executionTimeout = 5000;
+    // Execution timeout (30 seconds per test case - increased for complex code)
+    this.executionTimeout = 30000;
     
     // Language configurations
     this.languageConfig = {

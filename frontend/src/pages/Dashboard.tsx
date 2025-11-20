@@ -16,7 +16,8 @@ import {
   AlertCircle,
   CheckCircle2,
   HelpCircle,
-  Loader2
+  Loader2,
+  Volume2
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { consolidatedAPI } from "@/services/consolidatedAPI";
@@ -24,19 +25,28 @@ import Layout from "@/components/layout/Layout";
 import sessionsData from "@/mock/sessions.json";
 import Walkthrough from "@/components/ui/walkthrough";
 import { useWalkthrough, WalkthroughStep } from "@/hooks/use-walkthrough";
+import { useToast } from "@/hooks/use-toast";
+import AudioTranscriptionTest from "@/components/test/AudioTranscriptionTest";
 
 const Dashboard = () => {
   const { currentUser } = useAuth();
+  const { toast } = useToast();
   const [profileCompletion, setProfileCompletion] = useState<{
     isComplete: boolean;
     percentage: number;
     missingFields: string[];
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [statistics, setStatistics] = useState({
+    totalSessions: 0,
+    averageScore: 0,
+    bestScore: 0,
+    totalTime: 0
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
   
   // For now, we'll use mock data. In a real implementation, this would come from Firestore
   const sessions = sessionsData.recentSessions;
-  const stats = sessionsData.stats;
   const hasActivity = sessions.length > 0;
   
   // Load profile completion status
@@ -64,6 +74,40 @@ const Dashboard = () => {
     };
 
     loadProfileStatus();
+  }, [currentUser]);
+
+  // Load feedback statistics
+  useEffect(() => {
+    const loadStatistics = async () => {
+      if (!currentUser) {
+        setStatsLoading(false);
+        return;
+      }
+
+      try {
+        setStatsLoading(true);
+        const result = await consolidatedAPI.getAllSessions(currentUser);
+        
+        // Handle both direct response and wrapped response
+        const statsData = result.statistics || result.data?.statistics || {
+          totalSessions: 0,
+          averageScore: 0,
+          bestScore: 0,
+          totalTime: 0
+        };
+        
+        if (result.success !== false) {
+          setStatistics(statsData);
+        }
+      } catch (error) {
+        console.error('Failed to load statistics:', error);
+        // Keep default values on error
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    loadStatistics();
   }, [currentUser]);
   
   // User data with real profile completion status
@@ -109,6 +153,7 @@ const Dashboard = () => {
   const skipWalkthrough = () => {};
   const startWalkthrough = () => {};
 
+
   const quickActions = [
     {
       title: "Resume Analysis",
@@ -140,32 +185,43 @@ const Dashboard = () => {
     }
   ];
 
-  const statsDisplay = stats ? [
+  // Format duration helper
+  const formatDuration = (seconds: number): string => {
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    if (minutes < 60) return `${minutes}m ${remainingSeconds}s`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return `${hours}h ${remainingMinutes}m`;
+  };
+
+  const statsDisplay = [
+    {
+      label: "Total Sessions",
+      value: statistics.totalSessions.toString(),
+      icon: BarChart3,
+      color: "text-primary"
+    },
     {
       label: "Average Score",
-      value: `${stats.averageScore}%`,
+      value: `${statistics.averageScore}%`,
       icon: TrendingUp,
       color: "text-green-600"
     },
     {
-      label: "Total Sessions",
-      value: stats.totalSessions.toString(),
+      label: "Best Score",
+      value: `${statistics.bestScore}%`,
       icon: Target,
       color: "text-blue-600"
     },
     {
-      label: "Hours Practiced",
-      value: stats.totalHoursPracticed.toString(),
+      label: "Total Time",
+      value: formatDuration(statistics.totalTime),
       icon: Clock,
       color: "text-purple-600"
-    },
-    {
-      label: "Improvement",
-      value: `+${stats.improvementRate}%`,
-      icon: TrendingUp,
-      color: "text-green-600"
     }
-  ] : [];
+  ];
 
   return (
     <Layout>
@@ -208,6 +264,21 @@ const Dashboard = () => {
             </Card>
           )}
 
+          {/* Audio Transcription Test Section - TEMPORARILY HIDDEN */}
+          {/* TODO: Uncomment when needed
+          <Card className="mb-8 border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Volume2 className="w-5 h-5" />
+                Test Audio Transcription
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AudioTranscriptionTest />
+            </CardContent>
+          </Card>
+          */}
+
           {/* Loading state for profile completion */}
           {isLoading && (
             <Card className="mb-8">
@@ -220,8 +291,8 @@ const Dashboard = () => {
             </Card>
           )}
 
-          {/* Statistics Cards (for users with activity) */}
-          {hasActivity && (
+          {/* Statistics Cards - Show if we have statistics or if loading */}
+          {(statistics.totalSessions > 0 || statsLoading) && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
               {statsDisplay.map((stat, index) => (
                 <Card key={index} className="shadow-soft">
@@ -229,7 +300,14 @@ const Dashboard = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                        <p className="text-2xl font-bold">{stat.value}</p>
+                        {statsLoading ? (
+                          <div className="flex items-center gap-2 mt-2">
+                            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                            <p className="text-2xl font-bold text-muted-foreground">...</p>
+                          </div>
+                        ) : (
+                          <p className="text-2xl font-bold">{stat.value}</p>
+                        )}
                       </div>
                       <stat.icon className={`w-8 h-8 ${stat.color}`} />
                     </div>

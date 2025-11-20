@@ -9,21 +9,29 @@ import Footer from "./Footer";
 interface LayoutProps {
   children: ReactNode;
   showFooter?: boolean;
+  showNavbar?: boolean;
 }
 
 const Layout = ({ 
   children, 
-  showFooter = true 
+  showFooter = true,
+  showNavbar = true
 }: LayoutProps) => {
   const { currentUser } = useAuth();
   const [profileImageFile, setProfileImageFile] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [profileCompletion, setProfileCompletion] = useState<{
+    isComplete: boolean;
+    percentage: number;
+    missingFields: string[];
+  } | null>(null);
   
   useEffect(() => {
     const loadUserProfile = async () => {
       if (!currentUser) {
         setProfileImageFile(null);
         setUserProfile(null);
+        setProfileCompletion(null);
         return;
       }
 
@@ -31,7 +39,7 @@ const Layout = ({
         // For new users, getUserProfile will return empty profile structure seamlessly
         // For existing users, it returns their actual data
         // Profile image is optional and should never block the UI
-        const [profile, profileImage] = await Promise.all([
+        const [profile, profileImage, completion] = await Promise.all([
           consolidatedAPI.getUserProfile(currentUser).catch((error) => {
             // If profile fetch fails, return a minimal profile structure
             console.warn('Profile fetch failed, using defaults:', error);
@@ -57,16 +65,24 @@ const Layout = ({
             };
           }),
           // Profile image fetching should never fail - catch and continue
-          consolidatedAPI.getProfileImageFile(currentUser).catch(() => null)
+          consolidatedAPI.getProfileImageFile(currentUser).catch(() => null),
+          // Get profile completion status
+          consolidatedAPI.getProfileCompletionStatus(currentUser).catch(() => ({
+            isComplete: false,
+            percentage: 0,
+            missingFields: []
+          }))
         ]);
 
         setUserProfile(profile);
         setProfileImageFile(profileImage);
+        setProfileCompletion(completion);
       } catch (error) {
         // Silently fail - use Firebase user data as fallback
         console.warn('Failed to load user profile:', error);
         setUserProfile(null);
         setProfileImageFile(null);
+        setProfileCompletion(null);
       }
     };
 
@@ -82,13 +98,12 @@ const Layout = ({
       ? undefined // Will use fileId instead
       : userProfile?.profileImageUrl || currentUser.photoURL || undefined,
     profileImageFileId: profileImageFile?.id,
-    isProfileComplete: userProfile ? 
-      (userProfile.profileCompletionPercentage >= 100) : false
+    isProfileComplete: profileCompletion?.isComplete ?? false
   } : undefined;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Navigation isAuthenticated={isAuthenticated} user={user} />
+      {showNavbar && <Navigation isAuthenticated={isAuthenticated} user={user} />}
       <main className="flex-1">
         {children}
       </main>

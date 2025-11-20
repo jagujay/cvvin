@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Interview Analysis - MediaPipe Edition</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- MediaPipe Libraries (CDN for fastest setup) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>🎯 HR Interview Analysis System</h1>
+            <p class="subtitle">MediaPipe Edition - Face, Eyes, Hands & Body Tracking</p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Left Panel: Video & Controls -->
+            <div class="video-panel">
+                <div class="video-container">
+                    <video id="webcam" autoplay playsinline></video>
+                    <canvas id="overlay"></canvas>
+                </div>
+
+                <div class="status-bar">
+                    <div id="statusIndicator" class="status-indicator status-idle">⚫</div>
+                    <div id="statusText">System Idle</div>
+                </div>
+
+                <div class="controls">
+                    <button id="startBtn" class="btn btn-primary">
+                        <span class="icon">▶️</span> Start Analysis
+                    </button>
+                    <button id="stopBtn" class="btn btn-secondary" disabled>
+                        <span class="icon">⏹️</span> Stop Analysis
+                    </button>
+                    <button id="exportBtn" class="btn btn-export" disabled>
+                        <span class="icon">📊</span> Export Report
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Panel: Analysis Dashboard -->
+            <div class="dashboard-panel">
+                <h2>📊 Real-Time Analysis Dashboard</h2>
+
+                <!-- Overall Score Card -->
+                <div class="score-card">
+                    <div class="score-item">
+                        <div class="score-label">Engagement</div>
+                        <div class="score-value" id="engagementScore">--</div>
+                        <div class="score-bar">
+                            <div class="score-fill" id="engagementFill"></div>
+                        </div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-label">Confidence</div>
+                        <div class="score-value" id="confidenceScore">--</div>
+                        <div class="score-bar">
+                            <div class="score-fill" id="confidenceFill"></div>
+                        </div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-label">Composure</div>
+                        <div class="score-value" id="composureScore">--</div>
+                        <div class="score-bar">
+                            <div class="score-fill" id="composureFill"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Metrics Grid -->
+                <div class="metrics-grid">
+                    <!-- Eye Contact Metric -->
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-icon">👁️</span>
+                            <span class="metric-title">Eye Contact</span>
+                        </div>
+                        <div class="metric-value" id="eyeContactValue">0%</div>
+                        <div class="metric-status" id="eyeContactStatus">Initializing...</div>
+                    </div>
+
+                    <!-- Facial Expression Metric -->
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-icon">😊</span>
+                            <span class="metric-title">Expression</span>
+                        </div>
+                        <div class="metric-value" id="expressionValue">Neutral</div>
+                        <div class="metric-status" id="expressionStatus">Detecting...</div>
+                    </div>
+
+                    <!-- Hand Activity Metric (NEW!) -->
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-icon">👋</span>
+                            <span class="metric-title">Hand Activity</span>
+                        </div>
+                        <div class="metric-value" id="handValue">No hands</div>
+                        <div class="metric-status" id="handStatus">Tracking...</div>
+                    </div>
+
+                    <!-- Head Pose Metric -->
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-icon">🧠</span>
+                            <span class="metric-title">Head Pose</span>
+                        </div>
+                        <div class="metric-value" id="headPoseValue">Forward</div>
+                        <div class="metric-status" id="headPoseStatus">Tracking...</div>
+                    </div>
+
+                    <!-- Body Language Metric -->
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-icon">🧘</span>
+                            <span class="metric-title">Posture</span>
+                        </div>
+                        <div class="metric-value" id="postureValue">Upright</div>
+                        <div class="metric-status" id="postureStatus">Monitoring...</div>
+                    </div>
+
+                    <!-- Movement Metric -->
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-icon">📈</span>
+                            <span class="metric-title">Movement</span>
+                        </div>
+                        <div class="metric-value" id="movementValue">Low</div>
+                        <div class="metric-status" id="movementStatus">Monitoring...</div>
+                    </div>
+                </div>
+
+                <!-- Behavior Timeline -->
+                <div class="timeline-section">
+                    <h3>⏱️ Behavior Timeline</h3>
+                    <div class="timeline-container" id="timelineContainer">
+                        <div class="timeline-empty">Analysis will appear here once started</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session Info -->
+        <div class="session-info">
+            <div class="info-item">
+                <span class="info-label">Session Duration:</span>
+                <span class="info-value" id="sessionDuration">00:00</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Analyzed Frames:</span>
+                <span class="info-value" id="frameCount">0</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Behaviors Detected:</span>
+                <span class="info-value" id="behaviorCount">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Helper Scripts -->
+    <script src="js/behavior-metrics.js"></script>
+    <script src="js/visualization.js"></script>
+    
+    <!-- Main Application -->
+    <script defer src="app.js"></script>
+</body>
+</html>
+

@@ -264,4 +264,89 @@ router.get('/:fileId/url',
   })
 );
 
+/**
+ * GET /api/files/serve-by-path
+ * Serve a file by its path (for authenticated users, only their own files)
+ * Query param: path (e.g., /uploads/users/{userId}/...)
+ */
+router.get('/serve-by-path',
+  authMiddleware.authenticate.bind(authMiddleware),
+  authMiddleware.requireActiveUser.bind(authMiddleware),
+  asyncHandler(async (req, res) => {
+    try {
+      const { path: filePath } = req.query;
+      const userId = req.user.id;
+      
+      if (!filePath) {
+        return res.status(400).json({
+          success: false,
+          error: 'Path required',
+          message: 'Please provide a file path in the query parameter'
+        });
+      }
+
+      // Get file info by path (only for current user)
+      const fileInfo = await userService.getFileByPath(filePath, userId);
+      
+      if (!fileInfo) {
+        return res.status(404).json({
+          success: false,
+          error: 'File not found',
+          message: 'File does not exist or you do not have access to it'
+        });
+      }
+      
+      // Resolve file path (same logic as in /:fileId/view)
+      let resolvedPath;
+      if (process.platform === 'win32' && /^[A-Za-z]:[\\/]/.test(fileInfo.filePath)) {
+        resolvedPath = fileInfo.filePath;
+      } else if (process.platform !== 'win32' && path.isAbsolute(fileInfo.filePath)) {
+        resolvedPath = fileInfo.filePath;
+      } else {
+        if (fileInfo.filePath.startsWith('/')) {
+          resolvedPath = path.join(process.cwd(), fileInfo.filePath.substring(1));
+        } else {
+          resolvedPath = path.join(process.cwd(), fileInfo.filePath);
+        }
+      }
+      
+      try {
+        await fs.access(resolvedPath);
+        
+        // Set appropriate headers for viewing (inline for images)
+        res.setHeader('Content-Type', fileInfo.mimeType);
+        res.setHeader('Content-Disposition', `inline; filename="${fileInfo.fileName}"`);
+        res.setHeader('Content-Length', fileInfo.fileSize);
+        res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year cache
+        
+        // Stream the file
+        const fileStream = require('fs').createReadStream(resolvedPath);
+        fileStream.pipe(res);
+        
+        Logger.info(`File served by path: ${fileInfo.fileName} by user: ${req.user.email}`);
+        
+      } catch (error) {
+        Logger.error(`File not found on filesystem`, {
+          resolvedPath: resolvedPath,
+          storedPath: fileInfo.filePath,
+          error: error.message
+        });
+        return res.status(404).json({
+          success: false,
+          error: 'File not found',
+          message: `File exists in database but not on filesystem. Path: ${resolvedPath}`
+        });
+      }
+      
+    } catch (error) {
+      Logger.error('File serve by path failed', error);
+      res.status(500).json({
+        success: false,
+        error: 'Serve failed',
+        message: error.message
+      });
+    }
+  })
+);
+
 module.exports = router;

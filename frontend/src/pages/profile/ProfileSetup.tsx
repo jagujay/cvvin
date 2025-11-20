@@ -23,10 +23,12 @@ const ProfileSetup = () => {
   const { toast } = useToast();
   const { currentUser } = useAuth();
   const demoUserType = location.state?.demoUserType || 'new';
+  const isEditMode = location.pathname === '/profile/edit';
   
   const [formData, setFormData] = useState({
     profilePicture: "",
     profileImageFile: null as File | null,
+    profileImageFileId: null as string | null,
     firstName: "",
     lastName: "",
     email: currentUser?.email || "",
@@ -66,7 +68,9 @@ const ProfileSetup = () => {
           consolidatedAPI.getResumeFile(currentUser) // Already handles errors gracefully
         ]);
         
-        if (profile) {
+        console.log('Loaded profile data:', { profile, profileImageFile, resumeFile });
+        
+        if (profile && (profile.firstName || profile.lastName || profile.email)) {
           // Parse phone number if it exists
           // Try to extract country code, but prioritize common codes
           let phoneNumber = "";
@@ -95,12 +99,14 @@ const ProfileSetup = () => {
           let qualification = "";
           let qualificationOther = "";
           let college = "";
+          let currentSemester = "";
           let yearOfPassing = "";
           
           if (profile.profile?.education && profile.profile.education.length > 0) {
             const edu = profile.profile.education[0];
             qualification = edu.degree || "";
             college = edu.institution || "";
+            currentSemester = edu.currentSemester || "";
             if (edu.endDate) {
               yearOfPassing = new Date(edu.endDate).getFullYear().toString();
             }
@@ -108,11 +114,20 @@ const ProfileSetup = () => {
 
           // Handle profile picture - use existing URL or file
           let profilePictureUrl = "";
+          let profileImageFileId: string | null = null;
+          
           if (profileImageFile) {
+            // Store the fileId for secure access
+            profileImageFileId = profileImageFile.id;
             // Use the secure image URL for existing files
             profilePictureUrl = await consolidatedAPI.getImageUrl(currentUser, profileImageFile.id);
           } else if (profile.profileImageUrl) {
             profilePictureUrl = profile.profileImageUrl;
+            // Try to extract fileId from URL if it's a secure file path
+            const extractedFileId = extractFileIdFromUrl(profile.profileImageUrl);
+            if (extractedFileId) {
+              profileImageFileId = extractedFileId;
+            }
           }
 
           setFormData(prev => ({
@@ -123,9 +138,11 @@ const ProfileSetup = () => {
             countryCode,
             phoneNumber,
             profilePicture: profilePictureUrl,
+            profileImageFileId: profileImageFileId,
             qualification,
             qualificationOther: qualification === 'other' ? qualification : '',
             college,
+            currentSemester,
             yearOfPassing,
             skills: profile.profile?.skills || [],
             interestedRoles: profile.preferences?.targetRoles || []
@@ -136,15 +153,34 @@ const ProfileSetup = () => {
             console.log('Resume file exists:', resumeFile.fileName);
             setExistingResumeFile(resumeFile);
           }
+          
+          console.log('Form data set:', {
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+            email: profile.email,
+            qualification,
+            college,
+            currentSemester,
+            yearOfPassing,
+            skills: profile.profile?.skills,
+            interestedRoles: profile.preferences?.targetRoles
+          });
+        } else {
+          console.log('Profile data is empty or invalid');
         }
       } catch (error) {
         // Profile doesn't exist yet, that's okay for new users
-        console.log('No existing profile found, starting fresh:', error);
+        console.error('Error loading profile data:', error);
+        toast({
+          variant: "destructive",
+          title: "Failed to Load Profile",
+          description: "Could not load your existing profile data. You can still fill out the form."
+        });
       }
     };
 
     loadUserData();
-  }, [currentUser]);
+  }, [currentUser, toast]);
 
   const handleSkillInputChange = (value: string) => {
     setNewSkill(value);
@@ -233,45 +269,58 @@ const ProfileSetup = () => {
 
     setIsLoading(true);
 
-    // Validation
-    if (!formData.firstName || !formData.lastName) {
-      toast({
-        variant: "destructive",
-        title: "Name Required",
-        description: "Please enter both first name and last name."
-      });
-      setIsLoading(false);
-      return;
-    }
+    // Validation - only require fields for new profiles, allow incomplete when editing
+    if (!isEditMode) {
+      if (!formData.firstName || !formData.lastName) {
+        toast({
+          variant: "destructive",
+          title: "Name Required",
+          description: "Please enter both first name and last name."
+        });
+        setIsLoading(false);
+        return;
+      }
 
-    if (formData.skills.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "Skills Required",
-        description: "Please add at least one skill."
-      });
-      setIsLoading(false);
-      return;
-    }
+      if (formData.skills.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "Skills Required",
+          description: "Please add at least one skill."
+        });
+        setIsLoading(false);
+        return;
+      }
 
-    if (formData.interestedRoles.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "Roles Required",
-        description: "Please add at least one interested role."
-      });
-      setIsLoading(false);
-      return;
-    }
+      if (formData.interestedRoles.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "Roles Required",
+          description: "Please add at least one interested role."
+        });
+        setIsLoading(false);
+        return;
+      }
 
-    if (!formData.resume && !existingResumeFile) {
-      toast({
-        variant: "destructive",
-        title: "Resume Required",
-        description: "Please upload your resume."
-      });
-      setIsLoading(false);
-      return;
+      if (!formData.resume && !existingResumeFile) {
+        toast({
+          variant: "destructive",
+          title: "Resume Required",
+          description: "Please upload your resume."
+        });
+        setIsLoading(false);
+        return;
+      }
+    } else {
+      // For edit mode, only require name
+      if (!formData.firstName || !formData.lastName) {
+        toast({
+          variant: "destructive",
+          title: "Name Required",
+          description: "Please enter both first name and last name."
+        });
+        setIsLoading(false);
+        return;
+      }
     }
 
     try {
@@ -386,20 +435,34 @@ const ProfileSetup = () => {
               <CardContent className="space-y-4">
                 {/* Profile Picture */}
                 <div className="flex items-center space-x-4">
-                  <SecureAvatar 
-                    className="w-20 h-20"
-                    fileId={formData.profilePicture ? extractFileIdFromUrl(formData.profilePicture) : undefined}
-                    imageUrl={formData.profilePicture}
-                    fallbackText=""
-                    size={80}
-                    quality={85}
-                  >
-                    <div className="w-full h-full bg-muted flex items-center justify-center">
-                      <Upload className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                  </SecureAvatar>
-                  <div>
-                    <Label htmlFor="profile-picture" className="block text-sm font-medium mb-2">
+                  <div className="relative">
+                    <SecureAvatar 
+                      className="w-20 h-20"
+                      fileId={formData.profileImageFileId || (formData.profilePicture ? extractFileIdFromUrl(formData.profilePicture) : undefined)}
+                      imageUrl={formData.profilePicture}
+                      fallbackText={[formData.firstName, formData.lastName].filter(Boolean).join(' ') || 'U'}
+                      size={80}
+                      quality={85}
+                    />
+                    {(formData.profilePicture || formData.profileImageFileId) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData({
+                            ...formData,
+                            profilePicture: "",
+                            profileImageFile: null,
+                            profileImageFileId: null
+                          });
+                        }}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-700 transition-colors shadow-md"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="profile-picture" className="block text-sm font-medium">
                       Profile Picture
                     </Label>
                     <Button type="button" variant="outline" size="sm" className="relative overflow-hidden">
@@ -415,7 +478,8 @@ const ProfileSetup = () => {
                             reader.onload = (e) => setFormData({ 
                               ...formData, 
                               profilePicture: e.target?.result as string,
-                              profileImageFile: file
+                              profileImageFile: file,
+                              profileImageFileId: null // Clear old fileId when uploading new file
                             });
                             reader.readAsDataURL(file);
                           }
@@ -804,9 +868,9 @@ const ProfileSetup = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {existingResumeFile ? (
+                {existingResumeFile || formData.resume ? (
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="relative flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                           <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -814,46 +878,59 @@ const ProfileSetup = () => {
                           </svg>
                         </div>
                         <div>
-                          <p className="font-medium text-green-800">Resume Already Uploaded</p>
-                          <p className="text-sm text-green-600">{existingResumeFile.fileName}</p>
+                          <p className="font-medium text-green-800">
+                            {existingResumeFile ? "Resume Already Uploaded" : "Resume Selected"}
+                          </p>
+                          <p className="text-sm text-green-600">
+                            {existingResumeFile ? existingResumeFile.fileName : formData.resume?.name}
+                          </p>
                         </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExistingResumeFile(null);
+                          setFormData(prev => ({ ...prev, resume: null }));
+                        }}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-700 transition-colors shadow-md"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="text-center">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          setExistingResumeFile(null);
-                          setFormData(prev => ({ ...prev, resume: null }));
+                          // Trigger file input click
+                          document.getElementById('resume-upload')?.click();
                         }}
                       >
-                        Replace
+                        Upload
                       </Button>
                     </div>
-                    <div className="text-center">
-                      <p className="text-sm text-muted-foreground mb-2">Or upload a new resume:</p>
-                    </div>
                   </div>
-                ) : null}
-                
-                <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.txt"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    id="resume-upload"
-                  />
-                  <label htmlFor="resume-upload" className="cursor-pointer">
-                    <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-lg font-medium mb-2">
-                      {formData.resume ? formData.resume.name : "Choose your resume file"}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Supported formats: PDF, DOC, DOCX, TXT (Max 5MB)
-                    </p>
-                  </label>
-                </div>
+                ) : (
+                  <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.txt"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      id="resume-upload"
+                    />
+                    <label htmlFor="resume-upload" className="cursor-pointer">
+                      <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-lg font-medium mb-2">
+                        Choose your resume file
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Supported formats: PDF, DOC, DOCX, TXT (Max 5MB)
+                      </p>
+                    </label>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

@@ -394,31 +394,65 @@ class ConsolidatedAPI {
   // Resume Analysis
   async analyzeResume(user: User, fileId: string, jobDescription: string): Promise<any> {
     const headers = await this.getAuthHeaders(user);
-    const response = await fetch(`${BACKEND_BASE_URL}/api/analysis/resume`, {
-      method: 'POST',
-      headers: {
-        ...headers,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ fileId, jobDescription }),
-    });
-    const result = await this.handleResponse<{ success: boolean; data: any }>(response);
-    return result.data;
+    
+    // Create AbortController for timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 150000); // 150 seconds (2.5 minutes) - slightly longer than backend timeout
+    
+    try {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/analysis/resume`, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ fileId, jobDescription }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const result = await this.handleResponse<{ success: boolean; data: any }>(response);
+      return result.data;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Analysis took too long. Please try again with a smaller file or simpler job description.');
+      }
+      throw error;
+    }
   }
 
   // Code Execution
   async executeCode(user: User, code: string, language: string, testCases: any[]): Promise<any> {
     const headers = await this.getAuthHeaders(user);
-    const response = await fetch(`${BACKEND_BASE_URL}/api/code/execute`, {
-      method: 'POST',
-      headers: {
-        ...headers,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ code, language, testCases }),
-    });
-    const result = await this.handleResponse<{ success: boolean; data: any }>(response);
-    return result.data;
+    
+    // Create AbortController for timeout handling
+    const controller = new AbortController();
+    // Timeout: 60 seconds per test case + 30 seconds buffer (max 5 minutes)
+    const timeoutPerTestCase = 60000; // 60 seconds per test case
+    const bufferTime = 30000; // 30 seconds buffer
+    const totalTimeout = Math.min((testCases.length * timeoutPerTestCase) + bufferTime, 300000); // Max 5 minutes
+    const timeoutId = setTimeout(() => controller.abort(), totalTimeout);
+    
+    try {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/code/execute`, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code, language, testCases }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const result = await this.handleResponse<{ success: boolean; data: any }>(response);
+      return result.data;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error(`Code execution took too long. Maximum time allowed: ${Math.round(totalTimeout / 1000)} seconds.`);
+      }
+      throw error;
+    }
   }
 
   // Run Code (with custom input)
@@ -431,6 +465,277 @@ class ConsolidatedAPI {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ code, language, input }),
+    });
+    const result = await this.handleResponse<{ success: boolean; data: any }>(response);
+    return result.data;
+  }
+
+  // HR Session Methods
+  async startHRSession(
+    user: User,
+    questionCount: number = 5,
+    mode: 'fixed' | 'dynamic' = 'fixed',
+    useDistributed: boolean = true,
+    sessionId?: string
+  ): Promise<{ success: boolean; questions: any[]; sessionId: string }> {
+    const headers = await this.getAuthHeaders(user);
+    const response = await fetch(`${BACKEND_BASE_URL}/api/hr/start-session`, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        questionCount,
+        mode,
+        useDistributed,
+        sessionId
+      }),
+    });
+    return this.handleResponse<{ success: boolean; questions: any[]; sessionId: string }>(response);
+  }
+
+  async transcribeAudio(
+    user: User,
+    sessionId: string,
+    questionId: string,
+    audioBlob: Blob
+  ): Promise<{ success: boolean; transcription: any; error?: string }> {
+    const headers = await this.getAuthHeadersForFileUpload(user);
+    
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'recording.webm');
+    formData.append('sessionId', sessionId);
+    formData.append('questionId', questionId);
+    
+    const response = await fetch(`${BACKEND_BASE_URL}/api/hr/transcribe-audio`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    
+    return this.handleResponse<{ success: boolean; transcription: any; error?: string }>(response);
+  }
+
+  async submitHRAnswer(
+    user: User,
+    sessionId: string,
+    questionId: string,
+    transcription: string | any
+  ): Promise<{ success: boolean }> {
+    const headers = await this.getAuthHeaders(user);
+    const response = await fetch(`${BACKEND_BASE_URL}/api/hr/submit-answer`, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sessionId,
+        questionId,
+        transcription: typeof transcription === 'string' ? transcription : transcription.text || ''
+      }),
+    });
+    return this.handleResponse<{ success: boolean }>(response);
+  }
+
+  async completeHRSession(
+    user: User,
+    sessionId: string,
+    totalDuration: number,
+    violationStats: any,
+    qaPairs: any[]
+  ): Promise<{ success: boolean; error?: string }> {
+    const headers = await this.getAuthHeaders(user);
+    const response = await fetch(`${BACKEND_BASE_URL}/api/hr/complete-session`, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sessionId,
+        totalDuration,
+        violationStats,
+        qaPairs
+      }),
+    });
+    return this.handleResponse<{ success: boolean; error?: string }>(response);
+  }
+
+  async getHRSession(user: User, sessionId: string): Promise<any> {
+    const headers = await this.getAuthHeaders(user);
+    const response = await fetch(`${BACKEND_BASE_URL}/api/hr/session/${sessionId}`, {
+      method: 'GET',
+      headers,
+    });
+    const result = await this.handleResponse<{ success: boolean; data: any }>(response);
+    return result.data;
+  }
+
+  async storeViolations(sessionId: string, violationStats: any): Promise<void> {
+    // This might be handled by the proctoring service or a separate endpoint
+    // For now, we'll include it in the complete session call
+    console.log('Storing violations:', violationStats);
+  }
+
+  // Technical Interview Methods
+  async submitMCQ(
+    user: User,
+    questions: any[],
+    answers: Record<string, number>,
+    timeTaken: Record<string, number>,
+    totalTime: number,
+    sessionId?: string
+  ): Promise<{ success: boolean; data: any; sessionId: string }> {
+    const headers = await this.getAuthHeaders(user);
+    
+    // Create AbortController for timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 330000); // 330 seconds (5.5 minutes) - slightly longer than backend timeout
+    
+    try {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/technical/submit-mcq`, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          questions,
+          answers,
+          timeTaken,
+          totalTime,
+          sessionId
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const result = await this.handleResponse<{ success: boolean; data: any; sessionId: string }>(response);
+      return result;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('MCQ analysis took too long. Please try again.');
+      }
+      throw error;
+    }
+  }
+
+  async submitCoding(
+    user: User,
+    problem: any,
+    code: string,
+    language: string,
+    timeTaken: number,
+    testResults: any[],
+    sessionId?: string
+  ): Promise<{ success: boolean; data: any; sessionId: string }> {
+    const headers = await this.getAuthHeaders(user);
+    
+    // Create AbortController for timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 330000); // 330 seconds (5.5 minutes) - slightly longer than backend timeout
+    
+    try {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/technical/submit-coding`, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          problemId: problem.id || problem.problemId,
+          problem: problem,
+          code,
+          language,
+          timeTaken,
+          testResults,
+          sessionId
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const result = await this.handleResponse<{ success: boolean; data: any; sessionId: string }>(response);
+      return result;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Coding analysis took too long. Please try again.');
+      }
+      throw error;
+    }
+  }
+
+  async generateCombinedAnalysis(
+    user: User,
+    sessionId: string,
+    violationStats?: any
+  ): Promise<{ success: boolean; data: any }> {
+    const headers = await this.getAuthHeaders(user);
+    
+    // Create AbortController for timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 330000); // 330 seconds (5.5 minutes) - slightly longer than backend timeout
+    
+    try {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/technical/generate-combined-analysis`, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionId,
+          violationStats: violationStats || {}
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const result = await this.handleResponse<{ success: boolean; data: any }>(response);
+      return result;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Combined analysis generation took too long. Please try again.');
+      }
+      throw error;
+    }
+  }
+
+  // Session Management
+  async getAllSessions(user: User): Promise<{
+    success: boolean;
+    sessions: any[];
+    statistics: {
+      totalSessions: number;
+      averageScore: number;
+      bestScore: number;
+      totalTime: number;
+    };
+  }> {
+    const headers = await this.getAuthHeaders(user);
+    const response = await fetch(`${BACKEND_BASE_URL}/api/sessions`, {
+      method: 'GET',
+      headers,
+    });
+    return this.handleResponse<{
+      success: boolean;
+      sessions: any[];
+      statistics: {
+        totalSessions: number;
+        averageScore: number;
+        bestScore: number;
+        totalTime: number;
+      };
+    }>(response);
+  }
+
+  async getSession(user: User, sessionId: string): Promise<any> {
+    const headers = await this.getAuthHeaders(user);
+    const response = await fetch(`${BACKEND_BASE_URL}/api/sessions/${sessionId}`, {
+      method: 'GET',
+      headers,
     });
     const result = await this.handleResponse<{ success: boolean; data: any }>(response);
     return result.data;

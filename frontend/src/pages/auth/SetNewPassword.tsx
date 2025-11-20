@@ -8,7 +8,7 @@ import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { otpService } from "@/services/otpService";
 import Layout from "@/components/layout/Layout";
-import logoImage from "@/assets/logo.png";
+import logoImage from "@/assets/Logo-NoBG-cropped.png";
 
 const SetNewPassword = () => {
   const [newPassword, setNewPassword] = useState("");
@@ -80,62 +80,66 @@ const SetNewPassword = () => {
   };
 
   return (
-    <Layout showFooter={false}>
-      <div className="min-h-[calc(100vh-80px)] flex items-center justify-center p-6 gradient-subtle">
-        <Card className="w-full max-w-md shadow-strong">
-          <CardHeader className="text-center pb-4">
-            <div className="flex justify-center mb-4">
-              <img src={logoImage} alt="CVVIN" className="h-12 w-auto" />
+    <Layout showFooter={false} showNavbar={false}>
+      <div className="min-h-screen flex items-center justify-center p-4 md:p-6 gradient-subtle">
+        <Card className="w-full max-w-md shadow-strong relative border-0 bg-card/95 backdrop-blur-sm">
+          <CardHeader className="text-center pb-6 pt-12 px-8">
+            <div className="flex justify-center mb-6">
+              <img src={logoImage} alt="CVVIN Logo" className="h-28 w-auto md:h-36 lg:h-44 transition-transform hover:scale-105" />
             </div>
-            <CardTitle className="text-2xl font-bold">Create a New Password</CardTitle>
-            <p className="text-muted-foreground">
+            <CardTitle className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+              Create a New Password
+            </CardTitle>
+            <p className="text-muted-foreground text-sm md:text-base">
               Choose a strong password for your account
             </p>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="new-password">New Password</Label>
-                <div className="relative mt-1">
+          <CardContent className="px-8 pb-8">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="new-password" className="text-sm font-medium">New Password</Label>
+                <div className="relative">
                   <Input
                     id="new-password"
                     type={showNewPassword ? "text" : "password"}
                     placeholder="Enter new password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="pr-10"
+                    className="pr-10 h-11 transition-all focus:ring-2 focus:ring-primary/20"
+                    autoComplete="new-password"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                     onClick={() => setShowNewPassword(!showNewPassword)}
                   >
-                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showNewPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                   </Button>
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="confirm-password">Confirm New Password</Label>
-                <div className="relative mt-1">
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password" className="text-sm font-medium">Confirm New Password</Label>
+                <div className="relative">
                   <Input
                     id="confirm-password"
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Confirm new password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pr-10"
+                    className="pr-10 h-11 transition-all focus:ring-2 focus:ring-primary/20"
+                    autoComplete="new-password"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                   </Button>
                 </div>
               </div>
@@ -144,14 +148,14 @@ const SetNewPassword = () => {
                 Password must be at least 6 characters long
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full h-11 text-base font-semibold shadow-medium hover:shadow-strong transition-all" disabled={isLoading}>
                 {isLoading ? "Updating..." : "Reset Password"}
               </Button>
 
-              <div className="text-center">
+              <div className="text-center pt-2">
                 <Link 
                   to="/auth" 
-                  className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-smooth"
+                  className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors underline-offset-4 hover:underline"
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back to Login

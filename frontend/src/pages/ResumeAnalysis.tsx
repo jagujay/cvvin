@@ -435,13 +435,15 @@ Salary: $120,000 - $160,000`);
                     {/* Overall Score */}
                     <div className="text-center p-6 bg-muted/50 rounded-lg">
                       <div className="text-3xl font-bold text-primary mb-2">
-                        {analysisResult.overallScore}%
+                        {analysisResult.overallScore || 0}%
                       </div>
                       <p className="text-sm text-muted-foreground">Overall Match Score</p>
-                      <Progress value={analysisResult.overallScore} className="mt-3" />
+                      <Progress value={analysisResult.overallScore || 0} className="mt-3" />
                       <div className="flex justify-center gap-4 mt-4 text-xs">
-                        <span className="text-muted-foreground">Match: {analysisResult.matchPercentage}%</span>
-                        <span className="text-muted-foreground">Processed in {analysisResult.processingTime}s</span>
+                        <span className="text-muted-foreground">Match: {analysisResult.matchPercentage || analysisResult.overallScore || 0}%</span>
+                        {analysisResult.processingTime && (
+                          <span className="text-muted-foreground">Processed in {analysisResult.processingTime}s</span>
+                        )}
                       </div>
                     </div>
 
@@ -456,25 +458,34 @@ Salary: $120,000 - $160,000`);
                     <div>
                       <h4 className="font-semibold flex items-center gap-2 mb-3">
                         <CheckCircle className="w-4 h-4 text-green-600" />
-                        Matched Skills ({analysisResult.matchedSkills.length})
+                        Matched Skills ({analysisResult.matchedSkills?.length || 0})
                       </h4>
                       <div className="space-y-2">
-                        {analysisResult.matchedSkills.map((skill: any) => (
-                          <div key={skill.skill} className="flex items-center justify-between p-2 bg-green-50 rounded border border-green-200">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
-                                {skill.skill}
+                        {(analysisResult.matchedSkills || []).map((skill: any) => (
+                          <div key={skill.skill} className="p-2 bg-green-50 rounded border border-green-200">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
+                                  {skill.skill}
+                                </Badge>
+                                {skill.yearsExperience > 0 && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {skill.yearsExperience}y exp
+                                  </span>
+                                )}
+                              </div>
+                              <Badge 
+                                variant={skill.strength === 'high' ? 'default' : 'secondary'}
+                                className="text-xs"
+                              >
+                                {skill.proficiency || 'Intermediate'}
                               </Badge>
-                              <span className="text-xs text-muted-foreground">
-                                {skill.yearsExperience}y exp
-                              </span>
                             </div>
-                            <Badge 
-                              variant={skill.strength === 'high' ? 'default' : 'secondary'}
-                              className="text-xs"
-                            >
-                              {skill.proficiency}
-                            </Badge>
+                            {skill.evidence && (
+                              <p className="text-xs text-muted-foreground mt-1 italic">
+                                {skill.evidence}
+                              </p>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -484,12 +495,12 @@ Salary: $120,000 - $160,000`);
                     <div>
                       <h4 className="font-semibold flex items-center gap-2 mb-3">
                         <XCircle className="w-4 h-4 text-orange-600" />
-                        Missing Skills ({analysisResult.missingSkills.length})
+                        Missing Skills ({analysisResult.missingSkills?.length || 0})
                       </h4>
                       <div className="space-y-2">
-                        {analysisResult.missingSkills.map((skill: any) => (
-                          <div key={skill.skill} className="flex items-center justify-between p-2 bg-orange-50 rounded border border-orange-200">
-                            <div className="flex items-center gap-2">
+                        {(analysisResult.missingSkills || []).map((skill: any) => (
+                          <div key={skill.skill} className="p-2 bg-orange-50 rounded border border-orange-200">
+                            <div className="flex items-center gap-2 mb-1">
                               <Badge variant="outline" className="text-xs">
                                 {skill.skill}
                               </Badge>
@@ -500,10 +511,43 @@ Salary: $120,000 - $160,000`);
                                 {skill.importance} priority
                               </Badge>
                             </div>
+                            {skill.recommendation && (
+                              <p className="text-xs text-muted-foreground mt-1">{skill.recommendation}</p>
+                            )}
                           </div>
                         ))}
                       </div>
                     </div>
+
+                    {/* Extra Skills */}
+                    {analysisResult.extraSkills && analysisResult.extraSkills.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold flex items-center gap-2 mb-3">
+                          <TrendingUp className="w-4 h-4 text-purple-600" />
+                          Extra Skills ({analysisResult.extraSkills.length})
+                        </h4>
+                        <div className="space-y-2">
+                          {analysisResult.extraSkills.map((skill: any) => (
+                            <div key={skill.skill} className="p-2 bg-purple-50 rounded border border-purple-200">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
+                                  {skill.skill}
+                                </Badge>
+                                <Badge 
+                                  variant={skill.relevance === 'high' ? 'default' : 'secondary'}
+                                  className="text-xs"
+                                >
+                                  {skill.relevance} relevance
+                                </Badge>
+                              </div>
+                              {skill.value && (
+                                <p className="text-xs text-muted-foreground mt-1">{skill.value}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Strengths */}
                     <div>
@@ -529,49 +573,79 @@ Salary: $120,000 - $160,000`);
                       </div>
                     </div>
 
-                    {/* Top Recommendations */}
+                    {/* Recommendations for Newbies */}
                     <div>
                       <h4 className="font-semibold flex items-center gap-2 mb-3">
                         <TrendingUp className="w-4 h-4 text-primary" />
-                        Top Recommendations
+                        Recommendations (Beginner-Friendly)
                       </h4>
                       <div className="space-y-3">
-                        {analysisResult.recommendations.slice(0, 2).map((rec: any, index: number) => (
-                          <div key={index} className="p-4 border rounded-lg">
-                            <div className="flex items-center gap-2 mb-2">
+                        {(analysisResult.recommendations || []).slice(0, 3).map((rec: any, index: number) => (
+                          <div key={index} className="p-4 border rounded-lg bg-gradient-to-br from-blue-50 to-white">
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
                               <h5 className="font-medium">{rec.title}</h5>
                               <Badge 
                                 variant={rec.priority === 'high' ? 'destructive' : 'secondary'}
                                 className="text-xs"
                               >
-                                {rec.priority}
+                                {rec.priority} priority
                               </Badge>
+                              {rec.difficulty && (
+                                <Badge variant="outline" className="text-xs">
+                                  {rec.difficulty} level
+                                </Badge>
+                              )}
                             </div>
                             <p className="text-sm text-muted-foreground mb-2">{rec.description}</p>
-                            <p className="text-xs text-muted-foreground">Est. time: {rec.timeEstimate}</p>
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                              {rec.timeEstimate && (
+                                <span>⏱️ Est. time: {rec.timeEstimate}</span>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    {/* ATS Compatibility */}
+                    {/* ATS Score and Compatibility */}
                     <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-sm">ATS Compatibility</h4>
-                        <Badge variant="secondary">{analysisResult.atsCompatibility.score}%</Badge>
+                        <h4 className="font-semibold text-sm">ATS Score & Compatibility</h4>
+                        <Badge 
+                          variant={analysisResult.atsCompatibility?.score >= 80 ? 'default' : 
+                                  analysisResult.atsCompatibility?.score >= 60 ? 'secondary' : 'destructive'}
+                        >
+                          {analysisResult.atsCompatibility?.score || 0}%
+                        </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        Your resume's compatibility with Applicant Tracking Systems
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Your resume's compatibility with Applicant Tracking Systems (ATS)
                       </p>
-                      {analysisResult.atsCompatibility.issues.length > 0 && (
-                        <ul className="text-xs text-muted-foreground">
-                          {analysisResult.atsCompatibility.issues.map((issue: string, index: number) => (
-                            <li key={index} className="flex items-start gap-2">
-                              <span>•</span>
-                              <span>{issue}</span>
-                            </li>
-                          ))}
-                        </ul>
+                      {analysisResult.atsCompatibility?.issues && analysisResult.atsCompatibility.issues.length > 0 && (
+                        <div className="mb-3">
+                          <p className="text-xs font-semibold mb-1">Issues Found:</p>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            {analysisResult.atsCompatibility.issues.map((issue: string, index: number) => (
+                              <li key={index} className="flex items-start gap-2">
+                                <span className="text-orange-600">•</span>
+                                <span>{issue}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {analysisResult.atsCompatibility?.suggestions && analysisResult.atsCompatibility.suggestions.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold mb-1">Improvement Suggestions:</p>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            {analysisResult.atsCompatibility.suggestions.map((suggestion: string, index: number) => (
+                              <li key={index} className="flex items-start gap-2">
+                                <span className="text-green-600">✓</span>
+                                <span>{suggestion}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       )}
                     </div>
 

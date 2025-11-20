@@ -12,7 +12,7 @@ import {
 import { User, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import logoImage from "@/assets/logo.png";
+import logoImage from "@/assets/Logo-NoBG-cropped.png";
 
 interface NavigationProps {
   isAuthenticated?: boolean;
@@ -42,12 +42,15 @@ const Navigation = ({ isAuthenticated = false, user }: NavigationProps) => {
 
   return (
     <nav className="w-full bg-card border-b border-border shadow-soft">
-      <div className="container mx-auto px-6 py-4">
+      <div className="container mx-auto px-3 md:px-4 py-3 md:py-4">
         <div className="flex items-center justify-between">
-          {/* Logo and Brand */}
-          <Link to="/" className="flex items-center space-x-3 transition-smooth hover:opacity-80">
-            <img src={logoImage} alt="CVVIN Logo" className="h-10 w-auto" />
-            <span className="text-2xl font-bold text-primary">CVVIN</span>
+          {/* Logo */}
+          <Link to="/" className="flex items-center transition-smooth hover:opacity-80">
+            <img 
+              src={logoImage} 
+              alt="CVVIN Logo" 
+              className="h-14 w-auto object-contain md:h-16 lg:h-20" 
+            />
           </Link>
 
           {/* Right side content */}
@@ -56,13 +59,13 @@ const Navigation = ({ isAuthenticated = false, user }: NavigationProps) => {
               // Authenticated user dropdown
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                  <Button variant="ghost" className="relative h-12 w-12 rounded-full">
                     <SecureAvatar 
-                      className="h-10 w-10"
+                      className="h-12 w-12"
                       fileId={user.profileImageFileId || (user.profilePicture ? extractFileIdFromUrl(user.profilePicture) : undefined)}
                       imageUrl={user.profilePicture}
                       fallbackText={generateAvatarFallback(user.fullName)}
-                      size={40}
+                      size={48}
                       quality={85}
                     />
                     {/* Profile completion badge */}

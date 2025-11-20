@@ -8,6 +8,7 @@ const UserProfileService = require('../services/user.service');
 const authMiddleware = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 const Logger = require('../utils/logger.utils');
+const { query } = require('../config/database.config');
 
 // Initialize services
 const analysisService = new AnalysisService();
@@ -31,6 +32,20 @@ function resolveFilePath(filePath) {
     } else {
       return path.join(process.cwd(), filePath);
     }
+  }
+}
+
+/**
+ * Check if file exists and log details for debugging
+ */
+async function checkFileExists(filePath) {
+  const fs = require('fs').promises;
+  try {
+    await fs.access(filePath);
+    const stats = await fs.stat(filePath);
+    return { exists: true, size: stats.size };
+  } catch (error) {
+    return { exists: false, error: error.message };
   }
 }
 
@@ -95,10 +110,29 @@ router.post('/resume',
       // Resolve file path
       const resolvedFilePath = resolveFilePath(fileInfo.filePath);
 
+      // Check if file exists before proceeding
+      const fileCheck = await checkFileExists(resolvedFilePath);
+      if (!fileCheck.exists) {
+        Logger.error('Resume file not found', {
+          userId: userId,
+          fileId: fileId,
+          originalPath: fileInfo.filePath,
+          resolvedPath: resolvedFilePath,
+          error: fileCheck.error
+        });
+        return res.status(404).json({
+          success: false,
+          error: 'Resume file not found',
+          message: `Resume file not found at: ${resolvedFilePath}. Please upload the file again.`
+        });
+      }
+
       Logger.info('Starting resume analysis', {
         userId: userId,
         fileId: fileId,
-        filePath: resolvedFilePath
+        originalPath: fileInfo.filePath,
+        resolvedPath: resolvedFilePath,
+        fileSize: fileCheck.size
       });
 
       // Perform analysis
@@ -112,6 +146,55 @@ router.post('/resume',
         fileId: fileId,
         overallScore: analysisResult.overallScore
       });
+
+      // Extract resume text for storage (first 1000 chars)
+      let resumeText = '';
+      try {
+        const fs = require('fs').promises;
+        const pdfText = await analysisService.extractResumeText(resolvedFilePath);
+        resumeText = pdfText ? pdfText.substring(0, 1000) : '';
+      } catch (error) {
+        Logger.warn('Could not extract resume text for storage', { error: error.message });
+      }
+
+      // Store analysis result in PostgreSQL
+      try {
+        const insertQuery = `
+          INSERT INTO resume_analyses (
+            user_id,
+            file_id,
+            job_description,
+            analysis_result,
+            overall_score,
+            resume_text,
+            model_version
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+          RETURNING id, analysis_date
+        `;
+
+        const result = await query(insertQuery, [
+          userId,
+          fileId,
+          jobDescription.trim(),
+          JSON.stringify(analysisResult),
+          analysisResult.overallScore || 0,
+          resumeText,
+          'resume-analyzer-enhanced-v1'
+        ]);
+
+        Logger.info('Resume analysis stored in database', {
+          analysisId: result.rows[0].id,
+          userId: userId,
+          fileId: fileId
+        });
+      } catch (dbError) {
+        Logger.error('Failed to store analysis in database', {
+          error: dbError.message,
+          userId: userId,
+          fileId: fileId
+        });
+        // Continue even if database storage fails - return the analysis result
+      }
 
       res.json({
         success: true,
@@ -144,9 +227,85 @@ router.post('/resume',
   })
 );
 
+/**
+ * GET /api/analysis/resume/:analysisId
+ * Get a specific resume analysis by ID
+ */
+router.get('/resume/:analysisId',
+  authMiddleware.authenticate.bind(authMiddleware),
+  authMiddleware.requireActiveUser.bind(authMiddleware),
+  asyncHandler(async (req, res) => {
+    try {
+      const { analysisId } = req.params;
+      const userId = req.user.id;
+
+      // Get analysis from database
+      const result = await query(
+        `SELECT 
+          id,
+          user_id,
+          file_id,
+          job_description,
+          analysis_result,
+          overall_score,
+          resume_text,
+          analysis_date,
+          model_version
+        FROM resume_analyses
+        WHERE id = $1 AND user_id = $2`,
+        [analysisId, userId]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Analysis not found',
+          message: 'Resume analysis does not exist or you do not have access to it'
+        });
+      }
+
+      const analysis = result.rows[0];
+
+      // Parse analysis_result if it's a string
+      let analysisResult = analysis.analysis_result;
+      if (typeof analysisResult === 'string') {
+        try {
+          analysisResult = JSON.parse(analysisResult);
+        } catch (e) {
+          analysisResult = {};
+        }
+      }
+
+      // Transform to frontend format
+      const sessionReport = {
+        sessionId: analysis.id,
+        date: analysis.analysis_date,
+        duration: 0, // Resume analysis doesn't have duration
+        overallScore: analysis.overall_score || 0,
+        status: 'completed',
+        type: 'Resume Analysis',
+        isResumeAnalysis: true,
+        resume: {
+          analysisResult: analysisResult,
+          jobDescription: analysis.job_description,
+          fileId: analysis.file_id,
+          modelVersion: analysis.model_version,
+          resumeText: analysis.resume_text
+        }
+      };
+
+      res.json({
+        success: true,
+        data: sessionReport
+      });
+    } catch (error) {
+      Logger.error('Failed to get resume analysis', { error: error.message });
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  })
+);
+
 module.exports = router;
-
-
-
-
-

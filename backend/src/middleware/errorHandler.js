@@ -10,6 +10,11 @@ const Logger = require('../utils/logger.utils');
 const errorHandler = (err, req, res, next) => {
   Logger.error('Unhandled error', err);
 
+  // CRITICAL: Always set Content-Type to JSON to prevent multipart issues
+  if (!res.headersSent) {
+    res.setHeader('Content-Type', 'application/json');
+  }
+
   // Default error response
   let statusCode = 500;
   let message = 'Internal Server Error';
@@ -37,12 +42,14 @@ const errorHandler = (err, req, res, next) => {
     message = 'Internal Server Error';
   }
 
-  res.status(statusCode).json({
-    success: false,
-    error: message,
-    message: process.env.NODE_ENV === 'development' ? err.message : message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
+  if (!res.headersSent) {
+    res.status(statusCode).json({
+      success: false,
+      error: message,
+      message: process.env.NODE_ENV === 'development' ? err.message : message,
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
+  }
 };
 
 /**

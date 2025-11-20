@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proctoring MVP - Phase 1 Verification</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Local Libraries - No CDN Dependencies -->
+    <script src="libs/tesseract.min.js"></script>
+    <script src="libs/face-api.min.js"></script>
+    <script src="libs/tf.min.js"></script>
+    <script src="libs/ort.min.js"></script>
+    <script src="libs/webgazer.js"></script>
+    <script src="libs/opencv.js"></script>
+</head>
+<body>
+
+    <h1>Proctoring System - Advanced AI Monitoring</h1>
+
+    <div id="status" class="status-box">Loading application...</div>
+
+    <!-- Eye Tracking Calibration Section -->
+    <div id="calibrationSection" class="controls" style="display: none;">
+        <h2>Step 0: Eye Tracking Calibration</h2>
+        <p>Click on each point that appears on the screen to calibrate eye tracking.</p>
+        <button id="startCalibrationBtn">Start Calibration</button>
+        <div id="calibrationProgress"></div>
+    </div>
+
+    <div class="video-container">
+        <video id="webcam" width="720" height="560" autoplay muted></video>
+        <canvas id="overlay"></canvas>
+        <canvas id="webgazerCanvas"></canvas>
+    </div>
+
+    <div class="step-container">
+        <div class="controls">
+            <h2>Step 1 (Option A): Scan Your ID</h2>
+            <p>Hold your ID up to the camera and click "Scan ID".</p>
+            <button id="captureIdBtn">Scan ID</button>
+            <h3>Extracted Name (from OCR):</h3>
+            <pre id="nameOutput">(No ID scanned yet)</pre>
+        </div>
+
+        <div class="controls">
+            <h2>Step 1 (Option B): Use Reference File</h2>
+            <p>Load a pre-stored image (<code>reference.png</code>) from the server.</p>
+            <button id="loadReferenceBtn">Load Reference Image</button>
+        </div>
+    </div>
+
+
+    <div class="controls">
+        <h2>Step 2: Verify Your Face</h2>
+        <p>Look directly at the camera and click "Verify Face".</p>
+        <button id="captureFaceBtn" disabled>Verify Face</button>
+    </div>
+
+    <div class="controls" id="monitoringSection" style="display: none;">
+        <h2>Live Monitoring Log</h2>
+        <ul id="violationLog">
+            </ul>
+    </div>
+
+    <canvas id="snapshotCanvas" style="display: none;"></canvas>
+    <img id="referenceImage" src="reference.JPG" style="display: none;" />
+
+    <!-- Helper scripts -->
+    <script src="yolo-helper.js"></script>
+    <script src="pre-verification-checks.js"></script>
+    <script src="browser-lockdown.js"></script>
+    
+    <!-- Main application -->
+    <script defer src="app-enhanced.js"></script>
+</body>
+</html>

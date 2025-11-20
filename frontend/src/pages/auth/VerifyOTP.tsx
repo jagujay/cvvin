@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
-import logoImage from "@/assets/logo.png";
+import logoImage from "@/assets/Logo-NoBG-cropped.png";
 
 const VerifyOTP = () => {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -108,31 +108,31 @@ const VerifyOTP = () => {
   };
 
   return (
-    <Layout showFooter={false}>
-      <div className="min-h-[calc(100vh-80px)] flex items-center justify-center p-6 gradient-subtle">
-        <Card className="w-full max-w-md shadow-strong">
-          <CardHeader className="text-center pb-4">
-            <div className="flex justify-center mb-4">
-              <img src={logoImage} alt="CVVIN" className="h-12 w-auto" />
+    <Layout showFooter={false} showNavbar={false}>
+      <div className="min-h-screen flex items-center justify-center p-4 md:p-6 gradient-subtle">
+        <Card className="w-full max-w-md shadow-strong relative border-0 bg-card/95 backdrop-blur-sm">
+          <CardHeader className="text-center pb-6 pt-12 px-8">
+            <div className="flex justify-center mb-6">
+              <img src={logoImage} alt="CVVIN Logo" className="h-28 w-auto md:h-36 lg:h-44 transition-transform hover:scale-105" />
             </div>
-            <CardTitle className="text-2xl font-bold">
+            <CardTitle className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
               {otpType === 'reset' ? 'Password Reset Code' : 'Check Your Email'}
             </CardTitle>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm md:text-base mb-2">
               {otpType === 'reset' 
                 ? 'We\'ve sent a password reset code to'
                 : 'We\'ve sent a verification code to'
               }
             </p>
-            <p className="text-sm font-medium text-primary">{email}</p>
-            <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+            <p className="text-sm font-medium text-primary mb-4">{email}</p>
+            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg text-xs text-blue-800 dark:text-blue-200">
               <strong>Note:</strong> The code will expire in 10 minutes
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-8 pb-8">
             <form onSubmit={handleVerify} className="space-y-6">
               <div>
-                <div className="flex justify-center space-x-2">
+                <div className="flex justify-center space-x-3">
                   {otp.map((digit, index) => (
                     <Input
                       key={index}
@@ -143,13 +143,13 @@ const VerifyOTP = () => {
                       value={digit}
                       onChange={(e) => handleInputChange(index, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(index, e)}
-                      className="w-12 h-12 text-center text-lg font-semibold"
+                      className="w-14 h-14 text-center text-xl font-semibold transition-all focus:ring-2 focus:ring-primary/20"
                     />
                   ))}
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full h-11 text-base font-semibold shadow-medium hover:shadow-strong transition-all" disabled={isLoading}>
                 {isLoading ? "Verifying..." : (otpType === 'reset' ? "Verify Reset Code" : "Verify Account")}
               </Button>
 
@@ -166,17 +166,17 @@ const VerifyOTP = () => {
                     type="button"
                     variant="ghost"
                     onClick={handleResendOTP}
-                    className="text-primary hover:text-primary-hover p-0 h-auto"
+                    className="text-primary hover:text-primary-hover p-0 h-auto font-medium"
                   >
                     Resend OTP
                   </Button>
                 )}
               </div>
 
-              <div className="text-center">
+              <div className="text-center pt-2">
                 <Link 
                   to="/auth" 
-                  className="text-sm text-muted-foreground hover:text-primary transition-smooth"
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors underline-offset-4 hover:underline"
                 >
                   Back to Login
                 </Link>

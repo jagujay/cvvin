@@ -6,11 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
-import logoImage from "@/assets/logo.png";
+import logoImage from "@/assets/Logo-NoBG-cropped.png";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -115,163 +115,176 @@ const Login = () => {
   };
 
   return (
-    <Layout showFooter={false}>
-      <div className="min-h-[calc(100vh-80px)] flex items-center justify-center p-6 gradient-subtle">
-        <Card className="w-full max-w-md shadow-strong">
-          <CardHeader className="text-center pb-4">
-            <div className="flex justify-center mb-4">
-              <img src={logoImage} alt="CVVIN" className="h-12 w-auto" />
-            </div>
-            <CardTitle className="text-2xl font-bold">Welcome to CVVIN</CardTitle>
-            <p className="text-muted-foreground">Your AI interview preparation partner</p>
+    <Layout showFooter={false} showNavbar={false}>
+      <div className="min-h-screen flex items-center justify-center p-4 md:p-6 gradient-subtle">
+        <Card className="w-full max-w-md shadow-strong relative border-0 bg-card/95 backdrop-blur-sm">
+          {/* Back Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute top-4 left-4 z-10 hover:bg-accent/50"
+            onClick={() => navigate("/")}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          
+          <CardHeader className="text-center pb-6 pt-12 px-8 relative z-10">
+            <CardTitle className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+              Welcome to CVVIN
+            </CardTitle>
+            <p className="text-muted-foreground text-sm md:text-base">Your AI interview preparation partner</p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-8 pb-8">
             <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Log In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="login" className="text-sm md:text-base">Log In</TabsTrigger>
+                <TabsTrigger value="signup" className="text-sm md:text-base">Sign Up</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="login">
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div>
-                    <Label htmlFor="login-email">Email Address</Label>
+              <TabsContent value="login" className="mt-6">
+                <form onSubmit={handleLogin} className="space-y-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email" className="text-sm font-medium">Email Address</Label>
                     <Input
                       id="login-email"
                       type="email"
                       placeholder="your.email@example.com"
                       value={loginForm.email}
                       onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                      className="mt-1"
+                      className="h-11 transition-all focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="login-password">Password</Label>
-                    <div className="relative mt-1">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password" className="text-sm font-medium">Password</Label>
+                    <div className="relative">
                       <Input
                         id="login-password" 
                         type={showPassword ? "text" : "password"}
                         placeholder="Enter your password"
                         value={loginForm.password}
                         onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                        className="pr-10"
+                        className="pr-10 h-11 transition-all focus:ring-2 focus:ring-primary/20"
+                        autoComplete="off"
                       />
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="absolute right-0 top-0 h-full px-3"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                         onClick={() => setShowPassword(!showPassword)}
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                       </Button>
                     </div>
-                    <div className="text-right mt-2">
+                    <div className="text-right">
                       <Link 
                         to="/auth/forgot-password" 
-                        className="text-sm text-primary hover:text-primary-hover transition-smooth"
+                        className="text-sm text-primary hover:text-primary-hover transition-colors underline-offset-4 hover:underline"
                       >
                         Forgot password?
                       </Link>
                     </div>
                   </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button type="submit" className="w-full h-11 text-base font-semibold shadow-medium hover:shadow-strong transition-all" disabled={isLoading}>
                     {isLoading ? "Logging in..." : "Log In"}
                   </Button>
                 </form>
               </TabsContent>
 
-              <TabsContent value="signup">
-                <form onSubmit={handleSignup} className="space-y-4">
-                  <div>
-                    <Label htmlFor="signup-name">Full Name</Label>
+              <TabsContent value="signup" className="mt-6">
+                <form onSubmit={handleSignup} className="space-y-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-name" className="text-sm font-medium">Full Name</Label>
                     <Input
                       id="signup-name"
                       type="text"
                       placeholder="Enter your full name"
                       value={signupForm.displayName}
                       onChange={(e) => setSignupForm({ ...signupForm, displayName: e.target.value })}
-                      className="mt-1"
+                      className="h-11 transition-all focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="signup-email">Email Address</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email" className="text-sm font-medium">Email Address</Label>
                     <Input
                       id="signup-email"
                       type="email"
                       placeholder="your.email@example.com"
                       value={signupForm.email}
                       onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
-                      className="mt-1"
+                      className="h-11 transition-all focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="signup-password">Password</Label>
-                    <div className="relative mt-1">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password" className="text-sm font-medium">Password</Label>
+                    <div className="relative">
                       <Input
                         id="signup-password"
                         type={showPassword ? "text" : "password"}
                         placeholder="Create a strong password"
                         value={signupForm.password}
                         onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
-                        className="pr-10"
+                        className="pr-10 h-11 transition-all focus:ring-2 focus:ring-primary/20"
+                        autoComplete="new-password"
                       />
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="absolute right-0 top-0 h-full px-3"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                         onClick={() => setShowPassword(!showPassword)}
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                       </Button>
                     </div>
                   </div>
-                  <div>
-                    <Label htmlFor="confirm-password">Confirm Password</Label>
-                    <div className="relative mt-1">
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password" className="text-sm font-medium">Confirm Password</Label>
+                    <div className="relative">
                       <Input
                         id="confirm-password"
                         type={showConfirmPassword ? "text" : "password"}
                         placeholder="Confirm your password"
                         value={signupForm.confirmPassword}
                         onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })}
-                        className="pr-10"
+                        className="pr-10 h-11 transition-all focus:ring-2 focus:ring-primary/20"
+                        autoComplete="new-password"
                       />
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="absolute right-0 top-0 h-full px-3"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       >
-                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                       </Button>
                     </div>
                   </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button type="submit" className="w-full h-11 text-base font-semibold shadow-medium hover:shadow-strong transition-all" disabled={isLoading}>
                     {isLoading ? "Creating Account..." : "Sign Up"}
                   </Button>
                 </form>
               </TabsContent>
             </Tabs>
 
-            <div className="mt-6">
+            <div className="mt-8">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <Separator className="w-full" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+                  <span className="bg-card px-3 text-muted-foreground font-medium">Or continue with</span>
                 </div>
               </div>
               <Button 
                 variant="outline" 
-                className="w-full mt-4" 
+                className="w-full mt-5 h-11 border-2 hover:bg-accent/50 transition-all" 
                 onClick={handleGoogleLogin}
                 disabled={isLoading}
               >
-                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+                <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
                   <path
                     fill="currentColor"
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"

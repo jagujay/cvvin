@@ -22,7 +22,8 @@ import {
   AlertCircle,
   Target,
   Award,
-  Globe
+  Globe,
+  ArrowLeft
 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -156,19 +157,27 @@ const ProfileEnhanced = () => {
       <div className="container mx-auto px-6 py-8">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
-          <div className="flex justify-between items-start mb-8">
-            <div>
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <Button variant="ghost" asChild className="h-9">
+                <Link to="/dashboard">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Dashboard
+                </Link>
+              </Button>
+              <Button asChild>
+                <Link to="/profile-setup">
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Profile
+                </Link>
+              </Button>
+            </div>
+            <div className="text-center">
               <h1 className="text-3xl font-bold mb-2">My Profile</h1>
               <p className="text-muted-foreground">
                 Manage your personal information and preferences
               </p>
             </div>
-            <Button asChild>
-              <Link to="/profile-setup">
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Profile
-              </Link>
-            </Button>
           </div>
 
           {/* Profile Completion Status */}

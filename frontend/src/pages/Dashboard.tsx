@@ -16,8 +16,7 @@ import {
   AlertCircle,
   CheckCircle2,
   HelpCircle,
-  Loader2,
-  Volume2
+  Loader2
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { consolidatedAPI } from "@/services/consolidatedAPI";
@@ -26,7 +25,6 @@ import sessionsData from "@/mock/sessions.json";
 import Walkthrough from "@/components/ui/walkthrough";
 import { useWalkthrough, WalkthroughStep } from "@/hooks/use-walkthrough";
 import { useToast } from "@/hooks/use-toast";
-import AudioTranscriptionTest from "@/components/test/AudioTranscriptionTest";
 
 const Dashboard = () => {
   const { currentUser } = useAuth();
@@ -264,21 +262,6 @@ const Dashboard = () => {
             </Card>
           )}
 
-          {/* Audio Transcription Test Section - TEMPORARILY HIDDEN */}
-          {/* TODO: Uncomment when needed
-          <Card className="mb-8 border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Volume2 className="w-5 h-5" />
-                Test Audio Transcription
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <AudioTranscriptionTest />
-            </CardContent>
-          </Card>
-          */}
-
           {/* Loading state for profile completion */}
           {isLoading && (
             <Card className="mb-8">
@@ -306,7 +289,7 @@ const Dashboard = () => {
                             <p className="text-2xl font-bold text-muted-foreground">...</p>
                           </div>
                         ) : (
-                          <p className="text-2xl font-bold">{stat.value}</p>
+                        <p className="text-2xl font-bold">{stat.value}</p>
                         )}
                       </div>
                       <stat.icon className={`w-8 h-8 ${stat.color}`} />

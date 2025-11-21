@@ -583,6 +583,12 @@ class ProctoringService {
 
     // Monitor fullscreen exit
     const fullscreenHandler = () => {
+      // Don't record violations if proctoring is disabled
+      if ((window as any).__proctoringDisabled) {
+        console.log('🛑 Proctoring disabled - ignoring fullscreen change');
+        return;
+      }
+      
       console.log('🖥️ Fullscreen change event fired. In fullscreen:', !!document.fullscreenElement);
       if (!document.fullscreenElement) {
         console.log('🚨 FULLSCREEN EXIT DETECTED!');
@@ -596,12 +602,31 @@ class ProctoringService {
       }
     };
     document.addEventListener('fullscreenchange', fullscreenHandler);
+    // Store handler reference for cleanup
+    (this as any)._fullscreenHandler = fullscreenHandler;
     console.log('✅ Added fullscreenchange listener');
 
     // Listen for violations from extension (object detection, multiple faces, audio)
     window.addEventListener('message', (event) => {
       if (event.data?.type === 'VIOLATION_DETECTED') {
         const { violationType, details, severity } = event.data;
+        
+        // Check if we're in development mode - allow copy/paste in dev mode
+        const isDevMode = import.meta.env.DEV || (window as any).__devMode || false;
+        const upperType = (violationType || '').toUpperCase();
+        const upperDetails = (details || '').toUpperCase();
+        
+        // Skip copy/paste violations in development mode
+        if (isDevMode && (
+          upperType.includes('COPY') || 
+          upperType.includes('PASTE') ||
+          upperDetails.includes('COPY_DETECTED') ||
+          upperDetails.includes('PASTE_DETECTED')
+        )) {
+          console.log('🔧 Dev mode: Allowing copy/paste operation');
+          return; // Don't record violation in dev mode
+        }
+        
         this.recordViolation({
           type: violationType,
           details: details || 'Violation detected by extension',
@@ -630,6 +655,10 @@ class ProctoringService {
     }
 
     console.log('🛑 Stopping violation monitoring');
+    
+    // Disable proctoring globally to prevent any violations after this point
+    (window as any).__proctoringDisabled = true;
+    
     this.isMonitoringViolations = false;
 
     // Remove event listeners
@@ -641,6 +670,13 @@ class ProctoringService {
     if (this.blurHandler) {
       window.removeEventListener('blur', this.blurHandler);
       this.blurHandler = null;
+    }
+
+    // Remove fullscreen handler if it exists
+    if ((this as any)._fullscreenHandler) {
+      document.removeEventListener('fullscreenchange', (this as any)._fullscreenHandler);
+      (this as any)._fullscreenHandler = null;
+      console.log('✅ Removed fullscreen change listener');
     }
 
     // Notify extension to stop monitoring

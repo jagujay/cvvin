@@ -32,10 +32,10 @@ def analyse_resume_ollama(resume_content, job_description):
     prompt = f"""Analyze the following resume against the job description and provide a comprehensive JSON response.
 
 RESUME:
-{resume_content}
+    {resume_content}
 
 JOB DESCRIPTION:
-{job_description}
+    {job_description}
 
 Please provide a detailed analysis in the following JSON format:
 {{
@@ -105,7 +105,7 @@ IMPORTANT:
 - For extraSkills, explain how skills not in the job description can still be valuable
 - ATS score should consider formatting, keywords, structure, and compatibility
 - All recommendations should be actionable and clear for someone new to job searching
-"""
+    """
 
     try:
         client = ollama.Client()

@@ -115,75 +115,146 @@ class HRQuestionService {
   }
 
   /**
-   * Select fixed number of questions (random selection)
-   * @param {number} count - Number of questions to select
-   * @param {Object} options - Selection options
-   * @param {Array<string>} options.categories - Preferred categories
-   * @param {Array<string>} options.excludeIds - Question IDs to exclude
-   * @returns {Promise<Array>} Selected questions
+   * Get fixed set of questions in specific order
+   * @returns {Array} Fixed questions array
+   */
+  getFixedQuestionSet() {
+    const introQuestion = this.getIntroductionQuestion();
+    
+    // Fixed questions in exact order as specified
+    const fixedQuestions = [
+      introQuestion,
+      {
+        id: 'hr_fixed_001',
+        category: 'Career Development',
+        question: 'How could you have improved your career progress?',
+        followUps: [],
+        tips: [
+          'Be honest but positive',
+          'Focus on learning and growth opportunities',
+          'Show self-awareness and willingness to improve'
+        ],
+        timeLimit: 90,
+        rubric: {
+          clarity: { weight: 25, description: 'Clear communication and well-structured response' },
+          relevance: { weight: 30, description: 'Response relevance to career development' },
+          confidence: { weight: 20, description: 'Confidence and self-awareness in delivery' },
+          professionalism: { weight: 25, description: 'Professional tone and appropriate content' }
+        }
+      },
+      {
+        id: 'hr_fixed_002',
+        category: 'Strengths',
+        question: 'What are your greatest strengths?',
+        followUps: [],
+        tips: [
+          'Choose strengths relevant to the role',
+          'Provide specific examples',
+          'Be confident but not arrogant'
+        ],
+        timeLimit: 90,
+        rubric: {
+          clarity: { weight: 25, description: 'Clear communication and well-structured response' },
+          relevance: { weight: 30, description: 'Response relevance to the question and context' },
+          confidence: { weight: 20, description: 'Confidence and enthusiasm in delivery' },
+          professionalism: { weight: 25, description: 'Professional tone and appropriate content' }
+        }
+      },
+      {
+        id: 'hr_fixed_003',
+        category: 'Weakness',
+        question: 'What are your greatest weaknesses?',
+        followUps: [],
+        tips: [
+          'Be honest but strategic',
+          'Show self-awareness and improvement efforts',
+          'Turn weaknesses into growth opportunities'
+        ],
+        timeLimit: 90,
+        rubric: {
+          clarity: { weight: 25, description: 'Clear communication and well-structured response' },
+          relevance: { weight: 30, description: 'Response relevance to the question and context' },
+          confidence: { weight: 20, description: 'Confidence and self-awareness in delivery' },
+          professionalism: { weight: 25, description: 'Professional tone and appropriate content' }
+        }
+      },
+      {
+        id: 'hr_fixed_004',
+        category: 'Creativity',
+        question: 'Give me an example of your creativity',
+        followUps: [],
+        tips: [
+          'Provide a specific, concrete example',
+          'Explain the creative process and outcome',
+          'Show how creativity benefits your work'
+        ],
+        timeLimit: 90,
+        rubric: {
+          clarity: { weight: 25, description: 'Clear communication and well-structured response' },
+          relevance: { weight: 30, description: 'Response relevance with concrete examples' },
+          confidence: { weight: 20, description: 'Confidence and enthusiasm in delivery' },
+          professionalism: { weight: 25, description: 'Professional tone and appropriate content' }
+        }
+      },
+      {
+        id: 'hr_fixed_005',
+        category: 'Entrepreneurship',
+        question: 'Have you consider starting your own business?',
+        followUps: [],
+        tips: [
+          'Be honest about your entrepreneurial interests',
+          'Explain how it relates to your career goals',
+          'Show commitment to the current role if applicable'
+        ],
+        timeLimit: 90,
+        rubric: {
+          clarity: { weight: 25, description: 'Clear communication and well-structured response' },
+          relevance: { weight: 30, description: 'Response relevance to career goals' },
+          confidence: { weight: 20, description: 'Confidence and honesty in delivery' },
+          professionalism: { weight: 25, description: 'Professional tone and appropriate content' }
+        }
+      },
+      {
+        id: 'hr_fixed_006',
+        category: 'Motivation',
+        question: 'Why should the company hire you?',
+        followUps: [],
+        tips: [
+          'Highlight unique value proposition',
+          'Connect your skills to company needs',
+          'Show enthusiasm and commitment'
+        ],
+        timeLimit: 90,
+        rubric: {
+          clarity: { weight: 25, description: 'Clear communication and well-structured response' },
+          relevance: { weight: 30, description: 'Response relevance to the role and company' },
+          confidence: { weight: 20, description: 'Confidence and enthusiasm in delivery' },
+          professionalism: { weight: 25, description: 'Professional tone and appropriate content' }
+        }
+      }
+    ];
+
+    return fixedQuestions;
+  }
+
+  /**
+   * Select fixed number of questions (now returns fixed set in specific order)
+   * @param {number} count - Number of questions to select (ignored, always returns fixed set)
+   * @param {Object} options - Selection options (ignored for fixed questions)
+   * @returns {Promise<Array>} Selected questions in fixed order
    */
   async selectFixedQuestions(count = 5, options = {}) {
-    const { categories = [], excludeIds = [] } = options;
+    // Always return the fixed question set in the specified order
+    const fixedQuestions = this.getFixedQuestionSet();
     
-    await this.loadQuestions();
-    
-    // Always start with "Tell me about yourself"
-    const introQuestion = this.getIntroductionQuestion();
-    const selected = [introQuestion];
-    const remainingCount = count - 1;
-    
-    // Filter questions - exclude intro question, specified IDs, and beginner-inappropriate questions
-    let availableQuestions = this.questions.filter(q => {
-      // Exclude the intro question (if it exists in the dataset)
-      if (q.id === introQuestion.id || q.question.toLowerCase().includes('tell me about yourself')) {
-        return false;
-      }
-      
-      // Exclude specified IDs
-      if (excludeIds.includes(q.id)) {
-        return false;
-      }
-      
-      // Filter by category if specified
-      if (categories.length > 0 && !categories.includes(q.category)) {
-        return false;
-      }
-      
-      // Filter out incomplete questions (very short or missing question mark)
-      if (!q.question || q.question.length < 20 || !q.question.includes('?')) {
-        return false;
-      }
-      
-      // Filter out questions not suitable for beginners
-      if (!this.isSuitableForBeginners(q)) {
-        return false;
-      }
-      
-      return true;
-    });
-
-    if (availableQuestions.length === 0) {
-      Logger.warn('No suitable questions found after filtering, returning only intro question');
-      return selected;
-    }
-
-    // Ensure we don't select more than available
-    const selectCount = Math.min(remainingCount, availableQuestions.length);
-
-    // Shuffle and select remaining questions
-    const shuffled = [...availableQuestions].sort(() => Math.random() - 0.5);
-    const additionalQuestions = shuffled.slice(0, selectCount);
-    
-    // Add to selected (intro question is already first)
-    selected.push(...additionalQuestions);
-
     Logger.info('Selected fixed HR questions', {
-      count: selected.length,
-      categories: [...new Set(selected.map(q => q.category))],
-      hasIntro: true
+      count: fixedQuestions.length,
+      categories: [...new Set(fixedQuestions.map(q => q.category))],
+      hasIntro: true,
+      isFixedSet: true
     });
 
-    return selected;
+    return fixedQuestions;
   }
 
   /**

@@ -400,18 +400,18 @@ class ConsolidatedAPI {
     const timeoutId = setTimeout(() => controller.abort(), 150000); // 150 seconds (2.5 minutes) - slightly longer than backend timeout
     
     try {
-      const response = await fetch(`${BACKEND_BASE_URL}/api/analysis/resume`, {
-        method: 'POST',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ fileId, jobDescription }),
+    const response = await fetch(`${BACKEND_BASE_URL}/api/analysis/resume`, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ fileId, jobDescription }),
         signal: controller.signal,
-      });
+    });
       clearTimeout(timeoutId);
-      const result = await this.handleResponse<{ success: boolean; data: any }>(response);
-      return result.data;
+    const result = await this.handleResponse<{ success: boolean; data: any }>(response);
+    return result.data;
     } catch (error: any) {
       clearTimeout(timeoutId);
       if (error.name === 'AbortError') {
@@ -434,18 +434,18 @@ class ConsolidatedAPI {
     const timeoutId = setTimeout(() => controller.abort(), totalTimeout);
     
     try {
-      const response = await fetch(`${BACKEND_BASE_URL}/api/code/execute`, {
-        method: 'POST',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code, language, testCases }),
+    const response = await fetch(`${BACKEND_BASE_URL}/api/code/execute`, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ code, language, testCases }),
         signal: controller.signal,
-      });
+    });
       clearTimeout(timeoutId);
-      const result = await this.handleResponse<{ success: boolean; data: any }>(response);
-      return result.data;
+    const result = await this.handleResponse<{ success: boolean; data: any }>(response);
+    return result.data;
     } catch (error: any) {
       clearTimeout(timeoutId);
       if (error.name === 'AbortError') {
@@ -544,23 +544,52 @@ class ConsolidatedAPI {
     sessionId: string,
     totalDuration: number,
     violationStats: any,
-    qaPairs: any[]
+    qaPairs: any[],
+    gestureData?: any
   ): Promise<{ success: boolean; error?: string }> {
-    const headers = await this.getAuthHeaders(user);
-    const response = await fetch(`${BACKEND_BASE_URL}/api/hr/complete-session`, {
-      method: 'POST',
-      headers: {
-        ...headers,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    try {
+      console.log('📤 Sending HR session completion request:', {
+        sessionId,
+        totalDuration,
+        qaPairsCount: qaPairs.length,
+        hasGestureData: !!gestureData
+      });
+
+      const headers = await this.getAuthHeaders(user);
+      const requestBody = {
         sessionId,
         totalDuration,
         violationStats,
-        qaPairs
-      }),
-    });
-    return this.handleResponse<{ success: boolean; error?: string }>(response);
+        qaPairs,
+        gestureData
+      };
+
+      console.log('📤 Request body size:', JSON.stringify(requestBody).length, 'bytes');
+
+      const response = await fetch(`${BACKEND_BASE_URL}/api/hr/complete-session`, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('📥 Response status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Error Response:', errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
+      }
+
+      const result = await this.handleResponse<{ success: boolean; error?: string }>(response);
+      console.log('✅ API Response:', result);
+      return result;
+    } catch (error: any) {
+      console.error('❌ Error in completeHRSession:', error);
+      throw error;
+    }
   }
 
   async getHRSession(user: User, sessionId: string): Promise<any> {

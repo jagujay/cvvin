@@ -456,24 +456,24 @@ class TechnicalFeedbackService {
     let summary = `Overall Technical Round Score: ${overallScore}/100\n\n`;
     
     if (mcqAnalysis) {
-      summary += `MCQ Performance: ${mcqScore}/100\n`;
-      summary += `- Correct Answers: ${mcqAnalysis.correctAnswers || 0}/${mcqAnalysis.totalQuestions || 0}\n`;
-      summary += `- Average Time: ${Math.round(mcqAnalysis.averageTimePerQuestion || 0)}s per question\n`;
-      if (mcqAnalysis.conceptAnalysis?.strongConcepts?.length > 0) {
-        summary += `- Strong Areas: ${mcqAnalysis.conceptAnalysis.strongConcepts.slice(0, 3).join(', ')}\n`;
-      }
-      summary += `\n`;
+    summary += `MCQ Performance: ${mcqScore}/100\n`;
+    summary += `- Correct Answers: ${mcqAnalysis.correctAnswers || 0}/${mcqAnalysis.totalQuestions || 0}\n`;
+    summary += `- Average Time: ${Math.round(mcqAnalysis.averageTimePerQuestion || 0)}s per question\n`;
+    if (mcqAnalysis.conceptAnalysis?.strongConcepts?.length > 0) {
+      summary += `- Strong Areas: ${mcqAnalysis.conceptAnalysis.strongConcepts.slice(0, 3).join(', ')}\n`;
+    }
+    summary += `\n`;
     }
 
     if (codingAnalysis) {
-      summary += `Coding Performance: ${codingScore}/100\n`;
-      summary += `- Problem Difficulty: ${codingAnalysis.problemAnalysis?.difficulty || 'Unknown'}\n`;
-      summary += `- Test Cases: ${codingAnalysis.solutionStatus?.testCasesPassed || 0}/${codingAnalysis.solutionStatus?.testCasesTotal || 0} passed\n`;
-      summary += `- Solution Status: ${codingAnalysis.solutionStatus?.status || 'Unknown'}\n`;
-      if (codingAnalysis.codeQuality?.overallQuality) {
-        summary += `- Code Quality: ${codingAnalysis.codeQuality.overallQuality}\n`;
-      }
-      summary += `\n`;
+    summary += `Coding Performance: ${codingScore}/100\n`;
+    summary += `- Problem Difficulty: ${codingAnalysis.problemAnalysis?.difficulty || 'Unknown'}\n`;
+    summary += `- Test Cases: ${codingAnalysis.solutionStatus?.testCasesPassed || 0}/${codingAnalysis.solutionStatus?.testCasesTotal || 0} passed\n`;
+    summary += `- Solution Status: ${codingAnalysis.solutionStatus?.status || 'Unknown'}\n`;
+    if (codingAnalysis.codeQuality?.overallQuality) {
+      summary += `- Code Quality: ${codingAnalysis.codeQuality.overallQuality}\n`;
+    }
+    summary += `\n`;
     }
 
     if (overallScore >= 80) {

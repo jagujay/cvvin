@@ -335,3 +335,7 @@ console.log(result.data.statistics); // { total, byType, bySeverity }
 
 
 
+
+
+
+

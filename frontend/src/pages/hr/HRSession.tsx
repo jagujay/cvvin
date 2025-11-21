@@ -25,6 +25,7 @@ import { proctoringService, Violation } from "@/services/proctoringService";
 import { violationTracker } from "@/services/violationTracker";
 import { aiMonitoringService } from "@/services/aiMonitoringService";
 import { faceVerificationService } from "@/services/faceVerificationService";
+import { gestureAnalysisService, GestureData } from "@/services/gestureAnalysisService";
 
 interface Question {
   id: string;
@@ -77,9 +78,13 @@ const getFallbackQuestions = (count: number): Question[] => {
     const experienceKeywords = [
       'many jobs', 'multiple jobs', 'job hopping',
       'why are you leaving', 'why did you leave',
-      'previous job', 'previous role', 'previous position', 'previous employer',
+      'previous job', 'previous role', 'previous position', 'previous employer', 'previous work',
+      'last job', 'last role', 'last position', 'last work', 'last employer',
+      'worked on', 'work on', 'what did you work', 'what did you do',
       'resigned', 'fired', 'terminated',
-      'work experience', 'professional experience', 'career history', 'job history', 'employment history'
+      'work experience', 'professional experience', 'career history', 'job history', 'employment history',
+      'your last', 'in your last', 'at your last', 'from your last',
+      'describe a project', 'challenging project', 'project you worked'
     ];
     return !experienceKeywords.some(keyword => questionText.includes(keyword));
   };
@@ -105,6 +110,33 @@ const HRSession = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { currentUser } = useAuth();
+  
+  // Enable developer mode (allows copy-paste, etc.)
+  const isDevMode = import.meta.env.DEV || false;
+  
+  // Set global dev mode flag
+  useEffect(() => {
+    if (isDevMode) {
+      (window as any).__devMode = true;
+      console.log('🔧 Developer mode enabled - copy/paste allowed');
+      
+      // Remove any copy/paste blocking in dev mode
+      const allowCopyPaste = (e: ClipboardEvent) => {
+        // Allow copy/paste in dev mode - don't prevent default
+        console.log('🔧 Dev mode: Allowing clipboard operation:', e.type);
+      };
+      
+      document.addEventListener('copy', allowCopyPaste, true);
+      document.addEventListener('paste', allowCopyPaste, true);
+      document.addEventListener('cut', allowCopyPaste, true);
+      
+      return () => {
+        document.removeEventListener('copy', allowCopyPaste, true);
+        document.removeEventListener('paste', allowCopyPaste, true);
+        document.removeEventListener('cut', allowCopyPaste, true);
+      };
+    }
+  }, [isDevMode]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -120,6 +152,7 @@ const HRSession = () => {
   const [proctoringSetupComplete, setProctoringSetupComplete] = useState(false);
   const [isFullscreenExitBlocking, setIsFullscreenExitBlocking] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [preparationTime, setPreparationTime] = useState(5); // 5 seconds preparation
   const [isPreparing, setIsPreparing] = useState(false); // Start with false, will be true after audio plays
   const [hasRecorded, setHasRecorded] = useState(false);
@@ -134,6 +167,11 @@ const HRSession = () => {
   // AI monitoring
   const hiddenVideoRef = useRef<HTMLVideoElement>(null);
   const aiMonitoringInitialized = useRef(false);
+  
+  // Gesture analysis
+  const gestureVideoRef = useRef<HTMLVideoElement>(null);
+  const gestureCanvasRef = useRef<HTMLCanvasElement>(null);
+  const gestureInitialized = useRef(false);
   
   const currentQuestion = questions[currentQuestionIndex];
 
@@ -274,11 +312,17 @@ const HRSession = () => {
     initializeSession();
   }, [currentUser, toast]);
 
-  // Monitor fullscreen state and enforce it
+  // Monitor fullscreen state and enforce it (only if session is not complete)
   useEffect(() => {
-    if (!proctoringSetupComplete) return;
+    if (!proctoringSetupComplete || sessionComplete) return;
 
     const handleFullscreenChange = () => {
+      // Don't block if session is complete
+      if (sessionComplete) {
+        setIsFullscreenExitBlocking(false);
+        return;
+      }
+      
       const isInFullscreen = !!document.fullscreenElement;
       console.log('📺 Fullscreen state changed:', isInFullscreen);
       
@@ -296,7 +340,7 @@ const HRSession = () => {
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
-  }, [proctoringSetupComplete]);
+  }, [proctoringSetupComplete, sessionComplete]);
 
   // Setup violation listener when proctoring setup is complete
   useEffect(() => {
@@ -434,6 +478,61 @@ const HRSession = () => {
     };
   }, [proctoringSetupComplete, sessionId, toast]);
 
+  // Initialize gesture analysis after proctoring setup
+  useEffect(() => {
+    if (!proctoringSetupComplete || !sessionId || gestureInitialized.current) {
+      return;
+    }
+
+    const initializeGestureAnalysis = async () => {
+      try {
+        console.log('🎭 Initializing gesture analysis for HR round...');
+        
+        // Get camera stream for gesture tracking (reuse same stream if possible)
+        let stream: MediaStream;
+        if (hiddenVideoRef.current && hiddenVideoRef.current.srcObject) {
+          stream = hiddenVideoRef.current.srcObject as MediaStream;
+        } else {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        }
+        
+        if (gestureVideoRef.current && gestureCanvasRef.current) {
+          gestureVideoRef.current.srcObject = stream;
+          await gestureVideoRef.current.play();
+          
+          // Wait for video to be ready
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Set canvas size to match video
+          if (gestureVideoRef.current.videoWidth > 0) {
+            gestureCanvasRef.current.width = gestureVideoRef.current.videoWidth;
+            gestureCanvasRef.current.height = gestureVideoRef.current.videoHeight;
+          }
+          
+          // Initialize gesture analysis service
+          await gestureAnalysisService.initialize(
+            gestureVideoRef.current,
+            gestureCanvasRef.current
+          );
+          
+          gestureInitialized.current = true;
+          console.log('✅ Gesture analysis initialized for HR round');
+        }
+      } catch (error) {
+        console.error('❌ Failed to initialize gesture analysis:', error);
+        // Don't block the interview if gesture analysis fails
+      }
+    };
+
+    initializeGestureAnalysis();
+    
+    // Cleanup on unmount
+    return () => {
+      console.log('🧹 Cleaning up gesture analysis');
+      gestureAnalysisService.cleanup();
+    };
+  }, [proctoringSetupComplete, sessionId]);
+
   useEffect(() => {
     // Only count down time during recording phase (not during preparation)
     if (sessionStarted && timeRemaining > 0 && !isPreparing && !isRecording) {
@@ -476,6 +575,12 @@ const HRSession = () => {
   };
 
   const handleNextQuestion = async () => {
+    // Prevent multiple clicks
+    if (isSubmitting) {
+      console.log('⏳ Already submitting, please wait...');
+      return;
+    }
+
     if (currentQuestionIndex < questions.length - 1) {
       // Auto-save current response before moving
       saveCurrentResponse();
@@ -497,9 +602,25 @@ const HRSession = () => {
       // Response will be loaded by useEffect when questionIndex changes
     } else {
       // Last question - save and complete session
-      saveCurrentResponse();
-      await new Promise(resolve => setTimeout(resolve, 50));
-      await completeSession();
+      console.log('🚀 Starting session completion...');
+      setIsSubmitting(true);
+      
+      try {
+        // Save current response first
+        saveCurrentResponse();
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Complete the session
+        await completeSession();
+      } catch (error) {
+        console.error('❌ Error in handleNextQuestion:', error);
+        toast({
+          title: "Submission Error",
+          description: "Failed to submit session. Please try again.",
+          variant: "destructive"
+        });
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -563,7 +684,45 @@ const HRSession = () => {
 
   const completeSession = async () => {
     try {
+      console.log('🔄 Starting completeSession...');
+      console.log('📋 Session data:', {
+        sessionId,
+        currentUser: !!currentUser,
+        questionsCount: questions.length,
+        responsesCount: Object.keys(responses).length
+      });
+
+      // Validate required data
+      if (!sessionId) {
+        throw new Error('Session ID is missing. Cannot complete session.');
+      }
+      
+      if (!currentUser) {
+        throw new Error('User not authenticated. Please log in again.');
+      }
+
+      if (questions.length === 0) {
+        throw new Error('No questions found. Cannot complete session.');
+      }
+
+      // Mark session as complete FIRST to disable all proctoring checks
       setSessionComplete(true);
+      
+      // Disable fullscreen blocking immediately
+      setIsFullscreenExitBlocking(false);
+      
+      // Stop ALL monitoring and disable proctoring completely BEFORE doing anything else
+      console.log('🛑 Stopping all proctoring monitoring after submission');
+      
+      // Set global flag to disable proctoring
+      (window as any).__proctoringDisabled = true;
+      
+      // Stop violation monitoring (this removes listeners)
+      proctoringService.stopViolationMonitoring();
+      aiMonitoringService.stopMonitoring();
+      
+      // Small delay to ensure all listeners are removed
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // Save final response
       saveCurrentResponse();
@@ -582,7 +741,7 @@ const HRSession = () => {
         return {
           questionId: q.id,
           question: q.question,
-          transcription: transcription,
+          transcription: transcription || 'No response provided',
           audioBlob: audioBlobs[q.id] || null, // Include audio for backup
           wordTimestamps: typeof response === 'object' && response?.words 
             ? response.words 
@@ -591,94 +750,120 @@ const HRSession = () => {
       });
 
       console.log('📝 Preparing Q&A pairs for final analysis:', qaPairs.length);
-
-      // Store violations if sessionId exists
-      if (sessionId) {
-        try {
-          await consolidatedAPI.storeViolations(sessionId, violationStats);
-          console.log('✅ Violations stored successfully');
-        } catch (violationError) {
-          console.error('❌ Failed to store violations:', violationError);
-          // Don't block session completion if violation storage fails
-        }
-      }
-
-      // Stop monitoring BEFORE exiting fullscreen to prevent false violation
-      console.log('🛑 Stopping proctoring monitoring after submission');
-      proctoringService.stopViolationMonitoring();
-      aiMonitoringService.stopMonitoring();
-      
-      // Small delay to ensure monitoring is fully stopped
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Exit fullscreen
-      if (proctoringService.isFullscreen()) {
-        await proctoringService.exitFullscreen();
-        console.log('✅ Exited fullscreen');
-      }
-      
-      // Stop camera and microphone
-      console.log('📹 Stopping camera and microphone...');
-      
-      // Stop hidden video stream
-      if (hiddenVideoRef.current && hiddenVideoRef.current.srcObject) {
-        const stream = hiddenVideoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => {
-          track.stop();
-          console.log(`✅ Stopped ${track.kind} track from hidden video`);
-        });
-      }
-      
-      // Stop any other media streams
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true }).catch(() => null);
-      if (mediaStream) {
-        mediaStream.getTracks().forEach(track => {
-          track.stop();
-          console.log(`✅ Stopped ${track.kind} track`);
-        });
-      }
+      console.log('📝 Q&A pairs:', qaPairs.map(qa => ({
+        questionId: qa.questionId,
+        question: qa.question.substring(0, 50) + '...',
+        transcriptionLength: qa.transcription.length
+      })));
 
       // Calculate total duration (approximate)
       const totalDuration = questions.reduce((acc, q) => acc + (q.timeLimit || 90), 0);
 
-      // Send all Q&A pairs to backend for final analysis
-      if (sessionId && currentUser) {
+      // Collect gesture analysis data
+      let gestureData: GestureData | null = null;
+      if (gestureInitialized.current) {
         try {
-          const result = await consolidatedAPI.completeHRSession(
-            currentUser,
-            sessionId,
-            totalDuration,
-            violationStats,
-            qaPairs // Send all Q&A pairs for batch analysis
-          );
+          gestureAnalysisService.stopAnalysis(); // Ensure analysis is stopped
+          gestureData = gestureAnalysisService.getGestureData();
+          console.log('📊 Gesture data collected:', gestureData);
+        } catch (error) {
+          console.error('❌ Failed to collect gesture data:', error);
+        }
+      }
 
-          if (result.success) {
-            console.log('✅ Session completed and analyzed successfully');
-            toast({
-              title: "Session Completed",
-              description: "Your interview has been submitted for analysis.",
-              duration: 3000
-            });
-            
-            // Navigate to results or dashboard
-            setTimeout(() => {
-              navigate('/dashboard');
-            }, 2000);
-          } else {
-            throw new Error(result.error || 'Failed to complete session');
+      // Send all Q&A pairs to backend for final analysis FIRST
+      // This ensures analysis happens even if fullscreen exit causes issues
+      console.log('📤 Sending session data to backend...');
+      
+      try {
+        toast({
+          title: "Submitting Session",
+          description: "Please wait while we process your interview...",
+          duration: 5000
+        });
+
+        const result = await consolidatedAPI.completeHRSession(
+          currentUser,
+          sessionId,
+          totalDuration,
+          violationStats,
+          qaPairs, // Send all Q&A pairs for batch analysis
+          gestureData // Include gesture analysis data
+        );
+
+        console.log('📥 Backend response:', result);
+
+        if (result.success) {
+          console.log('✅ Session completed and analyzed successfully');
+          
+          // Store violations after successful completion
+          try {
+            await consolidatedAPI.storeViolations(sessionId, violationStats);
+            console.log('✅ Violations stored successfully');
+          } catch (violationError) {
+            console.error('❌ Failed to store violations:', violationError);
+            // Don't block - violations are already in violationStats
           }
-        } catch (completionError: any) {
-          console.error('❌ Failed to complete session:', completionError);
+          
+          // Now exit fullscreen AFTER analysis is complete
+          try {
+            if (document.fullscreenElement) {
+              await document.exitFullscreen().catch(() => {
+                // Ignore errors - fullscreen might already be exited
+                console.log('Fullscreen already exited or cannot exit');
+              });
+              console.log('✅ Exited fullscreen');
+            }
+          } catch (error) {
+            console.log('Fullscreen exit handled:', error);
+          }
+          
+          // Stop camera and microphone AFTER analysis
+          console.log('📹 Stopping camera and microphone...');
+          
+          // Stop hidden video stream
+          if (hiddenVideoRef.current && hiddenVideoRef.current.srcObject) {
+            const stream = hiddenVideoRef.current.srcObject as MediaStream;
+            stream.getTracks().forEach(track => {
+              track.stop();
+              console.log(`✅ Stopped ${track.kind} track from hidden video`);
+            });
+          }
+          
           toast({
-            title: "Completion Error",
-            description: completionError.message || "Session completed but analysis may be delayed.",
-            variant: "destructive"
+            title: "Session Completed",
+            description: "Your interview has been submitted for analysis. Redirecting...",
+            duration: 3000
           });
-          // Still navigate even if completion fails
+          
+          // Navigate to results or dashboard
           setTimeout(() => {
             navigate('/dashboard');
           }, 2000);
+        } else {
+          throw new Error(result.error || 'Failed to complete session');
         }
+      } catch (completionError: any) {
+        console.error('❌ Failed to complete session:', completionError);
+        console.error('Error details:', {
+          message: completionError.message,
+          stack: completionError.stack,
+          response: completionError.response
+        });
+        
+        toast({
+          title: "Submission Error",
+          description: completionError.message || "Failed to submit session. Please try again or contact support.",
+          variant: "destructive",
+          duration: 5000
+        });
+        
+        // Reset submitting state so user can try again
+        setIsSubmitting(false);
+        setSessionComplete(false);
+        
+        // Don't navigate on error - let user try again
+        throw completionError; // Re-throw to be caught by handleNextQuestion
       }
     } catch (error: any) {
       console.error('Failed to complete session:', error);
@@ -762,6 +947,18 @@ const HRSession = () => {
         autoPlay
         playsInline
         muted
+        style={{ display: 'none' }}
+      />
+      {/* Hidden video and canvas for gesture analysis */}
+      <video
+        ref={gestureVideoRef}
+        autoPlay
+        playsInline
+        muted
+        style={{ display: 'none' }}
+      />
+      <canvas
+        ref={gestureCanvasRef}
         style={{ display: 'none' }}
       />
       <div className="min-h-screen bg-background relative">
@@ -898,9 +1095,17 @@ const HRSession = () => {
                     autoStart={!isPreparing && questionAudioPlayed && !isRecording && !hasRecorded && preparationTime === 0}
                     onRecordingStart={() => {
                       setIsRecording(true);
+                      // Start gesture analysis when recording starts
+                      if (gestureInitialized.current) {
+                        gestureAnalysisService.startAnalysis();
+                      }
                     }}
                     onRecordingStop={() => {
                       setIsRecording(false);
+                      // Stop gesture analysis when recording stops
+                      if (gestureInitialized.current) {
+                        gestureAnalysisService.stopAnalysis();
+                      }
                     }}
                     onTranscriptionComplete={(transcription, audioBlob) => {
                       const transcriptionText = transcription.text || '';
@@ -963,16 +1168,41 @@ const HRSession = () => {
 
               <div>
                 <p className="text-sm text-muted-foreground mb-2">
-                  Or type your response (development mode):
+                  Or type your response (development mode - copy/paste enabled):
                 </p>
                 <textarea
                   value={currentResponse}
                   onChange={(e) => setCurrentResponse(e.target.value)}
-                  placeholder="Type your response here..."
+                  onPaste={(e) => {
+                    // Always allow paste - onChange will handle the content
+                    // In dev mode, explicitly log it
+                    if (isDevMode) {
+                      console.log('🔧 Dev mode: Paste operation detected and allowed');
+                    }
+                    // Don't prevent default - let paste happen normally
+                  }}
+                  onCopy={(e) => {
+                    // Always allow copy
+                    if (isDevMode) {
+                      console.log('🔧 Dev mode: Copy operation detected and allowed');
+                    }
+                    // Don't prevent default - let copy happen normally
+                  }}
+                  onCut={(e) => {
+                    // Always allow cut
+                    if (isDevMode) {
+                      console.log('🔧 Dev mode: Cut operation detected and allowed');
+                    }
+                    // Don't prevent default - let cut happen normally
+                  }}
+                  placeholder="Type your response here... (Copy/paste works in development mode)"
                   className="w-full min-h-[200px] p-4 border rounded-lg resize-none"
                 />
                 <p className="text-xs text-muted-foreground mt-2">
                   {currentResponse.length} characters
+                  {isDevMode && (
+                    <span className="ml-2 text-green-600">✓ Copy/paste enabled (dev mode)</span>
+                  )}
                 </p>
               </div>
             </CardContent>
@@ -1012,9 +1242,19 @@ const HRSession = () => {
             {/* Show Next button - always visible, but only after recording if hasRecorded */}
             <Button
               onClick={handleNextQuestion}
+              disabled={isSubmitting || (currentQuestionIndex === questions.length - 1 && !currentResponse.trim() && !hasRecorded)}
             >
-              {currentQuestionIndex === questions.length - 1 ? 'Complete Session' : 'Next Question'}
-              <ArrowRight className="ml-2 w-4 h-4" />
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {currentQuestionIndex === questions.length - 1 ? 'Submitting...' : 'Processing...'}
+                </>
+              ) : (
+                <>
+                  {currentQuestionIndex === questions.length - 1 ? 'Complete Session' : 'Next Question'}
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </>
+              )}
             </Button>
           </div>
 

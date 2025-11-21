@@ -81,20 +81,10 @@ router.post('/start-session',
         finalSessionId = uuidv4();
       }
 
-      // Select questions
+      // Select questions - Always use fixed questions in specific order
       let questions;
-      if (mode === 'dynamic') {
-        // Dynamic question generation not yet implemented - fallback to distributed
-        Logger.warn('Dynamic question generation not implemented, using distributed mode');
-        questions = await hrQuestionService.selectDistributedQuestions(questionCount);
-      } else {
-        // Fixed question selection
-        if (useDistributed) {
-          questions = await hrQuestionService.selectDistributedQuestions(questionCount);
-        } else {
-          questions = await hrQuestionService.selectFixedQuestions(questionCount);
-        }
-      }
+      // Always use fixed questions (ignoring mode and useDistributed flags)
+      questions = await hrQuestionService.selectFixedQuestions(questionCount);
 
       // Create session in database
       const sessionResult = await query(
@@ -440,7 +430,7 @@ router.post('/complete-session',
   authMiddleware.requireActiveUser.bind(authMiddleware),
   asyncHandler(async (req, res) => {
     try {
-      const { sessionId, totalDuration, violationStats, qaPairs } = req.body;
+      const { sessionId, totalDuration, violationStats, qaPairs, gestureData } = req.body;
       const userId = req.user.id;
 
       if (!sessionId) {
@@ -453,15 +443,25 @@ router.post('/complete-session',
       Logger.info('Completing HR session', {
         userId,
         sessionId,
-        questionCount: qaPairs?.length || 0
+        questionCount: qaPairs?.length || 0,
+        hasGestureData: !!gestureData,
+        gestureDataKeys: gestureData ? Object.keys(gestureData) : []
       });
 
       // Generate comprehensive HR feedback
       const feedback = await hrFeedbackService.generateHRFeedback(
         sessionId,
         qaPairs || [],
-        violationStats || {}
+        violationStats || {},
+        gestureData || null
       );
+      
+      Logger.info('HR feedback generated', {
+        hasFeedback: !!feedback,
+        feedbackKeys: feedback ? Object.keys(feedback) : [],
+        hasGestureAnalysis: !!feedback?.gestureAnalysis,
+        gestureAnalysisKeys: feedback?.gestureAnalysis ? Object.keys(feedback.gestureAnalysis) : []
+      });
 
       // Update session status
       await query(
@@ -480,7 +480,8 @@ router.post('/complete-session',
           JSON.stringify(feedback),
           JSON.stringify({
             violationStats: violationStats || {},
-            questionCount: qaPairs?.length || 0
+            questionCount: qaPairs?.length || 0,
+            gestureAnalysis: gestureData || null
           }),
           sessionId,
           userId
@@ -547,10 +548,59 @@ router.get('/session/:sessionId',
       if (typeof feedback === 'string') {
         try {
           feedback = JSON.parse(feedback);
+          Logger.info('Parsed feedback from session', {
+            hasGestureAnalysis: !!feedback.gestureAnalysis,
+            feedbackKeys: Object.keys(feedback),
+            gestureAnalysisType: feedback.gestureAnalysis ? typeof feedback.gestureAnalysis : 'none',
+            gestureAnalysisKeys: feedback.gestureAnalysis ? Object.keys(feedback.gestureAnalysis) : []
+          });
         } catch (e) {
+          Logger.error('Failed to parse feedback JSON', { error: e.message });
           feedback = {};
         }
+      } else if (feedback) {
+        Logger.info('Feedback already parsed', {
+          hasGestureAnalysis: !!feedback.gestureAnalysis,
+          feedbackKeys: Object.keys(feedback)
+        });
       }
+
+      // Extract metadata for gesture analysis
+      let metadata = {};
+      if (session.metadata) {
+        try {
+          metadata = typeof session.metadata === 'string' ? JSON.parse(session.metadata) : session.metadata;
+          Logger.info('Parsed metadata from session', {
+            hasGestureAnalysis: !!metadata.gestureAnalysis,
+            metadataKeys: Object.keys(metadata),
+            gestureAnalysisType: metadata.gestureAnalysis ? typeof metadata.gestureAnalysis : 'none'
+          });
+        } catch (e) {
+          Logger.error('Failed to parse metadata JSON', { error: e.message });
+          metadata = {};
+        }
+      }
+
+      // Include gesture analysis in feedback if available
+      // Priority: processed feedback.gestureAnalysis > raw metadata.gestureAnalysis
+      if (metadata.gestureAnalysis && feedback) {
+        if (!feedback.gestureAnalysis) {
+          // If feedback doesn't have processed gestureAnalysis, use raw data from metadata
+          feedback.gestureAnalysis = metadata.gestureAnalysis;
+        }
+      }
+      
+      // Ensure gestureAnalysis is accessible in both places
+      if (feedback?.gestureAnalysis && !metadata.gestureAnalysis) {
+        metadata.gestureAnalysis = feedback.gestureAnalysis;
+      }
+      
+      Logger.info('Gesture analysis in session data', {
+        sessionId: req.params.sessionId,
+        hasFeedbackGesture: !!feedback?.gestureAnalysis,
+        hasMetadataGesture: !!metadata?.gestureAnalysis,
+        gestureKeys: feedback?.gestureAnalysis ? Object.keys(feedback.gestureAnalysis) : []
+      });
 
       const sessionData = {
         id: session.id,
@@ -562,6 +612,7 @@ router.get('/session/:sessionId',
         score: session.overall_score || 0,
         status: session.status,
         feedback: feedback,
+        metadata: metadata,
         components: componentsResult.rows.map(row => {
           let componentData = row.component_data;
           let componentFeedback = row.feedback;
@@ -594,6 +645,21 @@ router.get('/session/:sessionId',
         metadata: session.metadata ? (typeof session.metadata === 'string' ? JSON.parse(session.metadata) : session.metadata) : {}
       };
 
+      // Final check: ensure gestureAnalysis is in the response
+      if (feedback.gestureAnalysis && !sessionData.feedback.gestureAnalysis) {
+        sessionData.feedback.gestureAnalysis = feedback.gestureAnalysis;
+      }
+      if (metadata.gestureAnalysis && !sessionData.metadata.gestureAnalysis) {
+        sessionData.metadata.gestureAnalysis = metadata.gestureAnalysis;
+      }
+
+      Logger.info('Final session data before sending', {
+        sessionId: req.params.sessionId,
+        feedbackHasGestureAnalysis: !!sessionData.feedback?.gestureAnalysis,
+        metadataHasGestureAnalysis: !!sessionData.metadata?.gestureAnalysis,
+        feedbackGestureKeys: sessionData.feedback?.gestureAnalysis ? Object.keys(sessionData.feedback.gestureAnalysis) : []
+      });
+
       res.json({
         success: true,
         data: sessionData
@@ -609,3 +675,5 @@ router.get('/session/:sessionId',
 );
 
 module.exports = router;
+
+

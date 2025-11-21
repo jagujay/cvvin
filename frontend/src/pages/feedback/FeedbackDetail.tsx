@@ -20,6 +20,7 @@ import {
   Share2,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Target,
   Award,
   Eye,
@@ -54,18 +55,38 @@ const FeedbackDetail = () => {
 
       try {
         setLoading(true);
-        // Fetch session using unified getSession method
-        const response = await consolidatedAPI.getSession(currentUser, sessionId);
-        console.log('Session API response:', response);
+        // For HR sessions, use the HR-specific endpoint to get complete data including gesture analysis
+        // Try HR endpoint first if we suspect it's an HR session (from URL or try both)
+        let sessionData: any;
         
-        // Transform backend response to match FeedbackDetail expected structure
-        const sessionData = response.data || response;
+        // Try HR endpoint first (more likely to have gesture data)
+        try {
+          console.log('📋 Trying HR-specific endpoint first...');
+          sessionData = await consolidatedAPI.getHRSession(currentUser, sessionId);
+          console.log('✅ HR Session response received:', sessionData);
+        } catch (hrError) {
+          console.log('HR endpoint failed, trying generic endpoint...', hrError);
+          // Fallback to generic endpoint
+          sessionData = await consolidatedAPI.getSession(currentUser, sessionId);
+        }
+        
+        console.log('Final sessionData:', sessionData);
+        console.log('sessionData.type:', sessionData?.type);
+        console.log('sessionData.sessionType:', sessionData?.sessionType);
+        console.log('sessionData.feedback:', sessionData?.feedback);
+        console.log('sessionData.feedback?.gestureAnalysis:', sessionData?.feedback?.gestureAnalysis);
+        console.log('sessionData.metadata:', sessionData?.metadata);
+        console.log('sessionData.metadata?.gestureAnalysis:', sessionData?.metadata?.gestureAnalysis);
+        console.log('sessionData.components:', sessionData?.components);
+        
+        // Store raw response for debugging
+        (window as any).__lastSessionResponse = sessionData;
         
         // Find specific components
         const mcqComponent = sessionData.components?.find((c: any) => c.type === 'mcq');
         const codingComponent = sessionData.components?.find((c: any) => c.type === 'coding');
         const hrComponent = sessionData.components?.find((c: any) => c.type === 'hr');
-
+        
         const isResumeAnalysis = sessionData.sessionType === 'resume' || sessionData.isResumeAnalysis;
         const recommendationsArray = Array.isArray(sessionData.feedback?.recommendations)
           ? sessionData.feedback?.recommendations
@@ -141,7 +162,27 @@ const FeedbackDetail = () => {
             summary: hrComponent.feedback?.summary || hrComponent.feedback?.overallFeedback || '',
             strengths: hrComponent.feedback?.strengths || [],
             weaknesses: hrComponent.feedback?.weaknesses || [],
-            feedback: hrComponent.feedback
+            feedback: hrComponent.feedback,
+            finalReport: sessionData.feedback || {},
+            gestureAnalysis: sessionData.feedback?.gestureAnalysis || sessionData.metadata?.gestureAnalysis || hrComponent.feedback?.gestureAnalysis || hrComponent.data?.gestureAnalysis || null,
+            // Also store raw feedback for gesture lookup
+            rawFeedback: sessionData.feedback || {}
+          } : (sessionData.type === 'HR Interview' || sessionData.sessionType === 'hr') ? {
+            // If no HR component but it's an HR session, create HR data structure
+            score: sessionData.score || 0,
+            questionsAnswered: 0,
+            totalQuestions: 0,
+            rubricScores: {},
+            textAnalyses: {},
+            questions: sessionData.feedback?.questions || [],
+            responses: {},
+            summary: sessionData.feedback?.summary || '',
+            strengths: sessionData.feedback?.strengths || [],
+            weaknesses: sessionData.feedback?.weaknesses || [],
+            feedback: sessionData.feedback || {},
+            finalReport: sessionData.feedback || {},
+            gestureAnalysis: sessionData.feedback?.gestureAnalysis || sessionData.metadata?.gestureAnalysis || null,
+            rawFeedback: sessionData.feedback || {}
           } : null,
           
           // Resume analysis flag and data
@@ -216,10 +257,10 @@ const FeedbackDetail = () => {
             warnings: (sessionData.feedback.proctoringFeedback.breakdown?.medium?.length || 0) + (sessionData.feedback.proctoringFeedback.breakdown?.low?.length || 0),
             tabSwitches: sessionData.feedback.proctoringFeedback.violations?.TAB_SWITCH || 0,
             message: sessionData.feedback.proctoringFeedback.message || '',
-            severity: sessionData.feedback.proctoringFeedback.severity || 'none'
+            severity: sessionData.feedback.proctoringFeedback.severity || 'none',
+            breakdown: sessionData.feedback.proctoringFeedback.breakdown || {},
+            violationsDetail: sessionData.feedback.proctoringFeedback.violations || {}
           } : null,
-          
-          // Include full feedback object
           feedback: sessionData.feedback || {},
           
           // Error analysis from both rounds
@@ -241,6 +282,8 @@ const FeedbackDetail = () => {
         };
         
         console.log('Transformed session data:', transformedData);
+        console.log('Transformed hr.gestureAnalysis:', transformedData.hr?.gestureAnalysis);
+        console.log('Transformed feedback.gestureAnalysis:', transformedData.feedback?.gestureAnalysis);
         setSessionReport(transformedData);
       } catch (error: any) {
         console.error('Failed to fetch session:', error);
@@ -688,7 +731,8 @@ const FeedbackDetail = () => {
                       Proctoring Report
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-6">
+                    {/* Summary Stats */}
                     <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div className="text-center">
                         <div className="text-2xl font-bold text-green-600">
@@ -715,6 +759,120 @@ const FeedbackDetail = () => {
                         <p className="text-sm text-muted-foreground">Tab Switches</p>
                       </div>
                     </div>
+
+                    {/* Detailed Violations Breakdown */}
+                    {(() => {
+                      const proctoringFeedback = sessionReport.proctoring?.breakdown ? 
+                        { 
+                          breakdown: sessionReport.proctoring.breakdown, 
+                          violations: sessionReport.proctoring.violationsDetail, 
+                          message: sessionReport.proctoring.message 
+                        } :
+                        sessionReport.feedback?.proctoringFeedback || {};
+                      if (!proctoringFeedback || (!proctoringFeedback.breakdown && !proctoringFeedback.violations)) return null;
+
+                      return (
+                        <div className="space-y-4">
+                          <Separator />
+                          <h4 className="font-semibold">Detailed Violations Breakdown</h4>
+                          
+                          {/* Critical Violations */}
+                          {proctoringFeedback.breakdown.critical && proctoringFeedback.breakdown.critical.length > 0 && (
+                            <div className="p-4 border border-red-300 rounded-lg bg-red-50/50">
+                              <h5 className="font-semibold text-red-700 mb-3 flex items-center gap-2">
+                                <AlertCircle className="w-4 h-4" />
+                                Critical Violations
+                              </h5>
+                              <div className="space-y-2">
+                                {proctoringFeedback.breakdown.critical.map((violation: any, index: number) => (
+                                  <div key={index} className="flex items-center justify-between p-2 bg-white rounded border border-red-200">
+                                    <span className="text-sm font-medium">{violation.type || 'Unknown'}</span>
+                                    <Badge variant="destructive">{violation.count || 0} times</Badge>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* High Severity Violations */}
+                          {proctoringFeedback.breakdown.high && proctoringFeedback.breakdown.high.length > 0 && (
+                            <div className="p-4 border border-orange-300 rounded-lg bg-orange-50/50">
+                              <h5 className="font-semibold text-orange-700 mb-3 flex items-center gap-2">
+                                <AlertCircle className="w-4 h-4" />
+                                High Severity Violations
+                              </h5>
+                              <div className="space-y-2">
+                                {proctoringFeedback.breakdown.high.map((violation: any, index: number) => (
+                                  <div key={index} className="flex items-center justify-between p-2 bg-white rounded border border-orange-200">
+                                    <span className="text-sm font-medium">{violation.type || 'Unknown'}</span>
+                                    <Badge variant="default">{violation.count || 0} times</Badge>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Medium Severity Violations */}
+                          {proctoringFeedback.breakdown.medium && proctoringFeedback.breakdown.medium.length > 0 && (
+                            <div className="p-4 border border-yellow-300 rounded-lg bg-yellow-50/50">
+                              <h5 className="font-semibold text-yellow-700 mb-3 flex items-center gap-2">
+                                <AlertCircle className="w-4 h-4" />
+                                Medium Severity Violations
+                              </h5>
+                              <div className="space-y-2">
+                                {proctoringFeedback.breakdown.medium.map((violation: any, index: number) => (
+                                  <div key={index} className="flex items-center justify-between p-2 bg-white rounded border border-yellow-200">
+                                    <span className="text-sm font-medium">{violation.type || 'Unknown'}</span>
+                                    <Badge variant="secondary">{violation.count || 0} times</Badge>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Low Severity Violations */}
+                          {proctoringFeedback.breakdown.low && proctoringFeedback.breakdown.low.length > 0 && (
+                            <div className="p-4 border border-blue-300 rounded-lg bg-blue-50/50">
+                              <h5 className="font-semibold text-blue-700 mb-3 flex items-center gap-2">
+                                <AlertCircle className="w-4 h-4" />
+                                Low Severity Violations
+                              </h5>
+                              <div className="space-y-2">
+                                {proctoringFeedback.breakdown.low.map((violation: any, index: number) => (
+                                  <div key={index} className="flex items-center justify-between p-2 bg-white rounded border border-blue-200">
+                                    <span className="text-sm font-medium">{violation.type || 'Unknown'}</span>
+                                    <Badge variant="outline">{violation.count || 0} times</Badge>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* All Violations (if breakdown not available) */}
+                          {proctoringFeedback.violations && Object.keys(proctoringFeedback.violations).length > 0 && 
+                           (!proctoringFeedback.breakdown || Object.keys(proctoringFeedback.breakdown).length === 0) && (
+                            <div className="p-4 border rounded-lg bg-muted/50">
+                              <h5 className="font-semibold mb-3">All Violations</h5>
+                              <div className="space-y-2">
+                                {Object.entries(proctoringFeedback.violations).map(([type, count]: [string, any]) => (
+                                  <div key={type} className="flex items-center justify-between p-2 bg-white rounded border">
+                                    <span className="text-sm font-medium">{type.replace(/_/g, ' ')}</span>
+                                    <Badge variant="outline">{count || 0} times</Badge>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Proctoring Message */}
+                          {proctoringFeedback.message && (
+                            <div className="p-3 bg-muted rounded-lg">
+                              <p className="text-sm">{proctoringFeedback.message}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
               )}
@@ -731,19 +889,19 @@ const FeedbackDetail = () => {
                   return (
                     <div className="space-y-6">
                       {/* Overall Score - Exact match to ResumeAnalysis */}
-                      <div className="text-center p-6 bg-muted/50 rounded-lg">
+                          <div className="text-center p-6 bg-muted/50 rounded-lg">
                         <div className="text-3xl font-bold text-primary mb-2">
                           {analysisResult.overallScore || sessionReport.overallScore || 0}%
-                        </div>
+                            </div>
                         <p className="text-sm text-muted-foreground">Overall Match Score</p>
                         <Progress value={analysisResult.overallScore || sessionReport.overallScore || 0} className="mt-3" />
                         <div className="flex justify-center gap-4 mt-4 text-xs">
                           <span className="text-muted-foreground">Match: {analysisResult.matchPercentage || analysisResult.overallScore || sessionReport.overallScore || 0}%</span>
                           {analysisResult.processingTime && (
                             <span className="text-muted-foreground">Processed in {analysisResult.processingTime}s</span>
-                          )}
-                        </div>
-                      </div>
+                            )}
+                          </div>
+                                </div>
 
                       {/* Job Description Info */}
                       {analysisResult.jobDescription && (
@@ -753,8 +911,8 @@ const FeedbackDetail = () => {
                           <p className="text-xs text-muted-foreground">
                             {analysisResult.jobDescription.company || 'Not specified'} • {analysisResult.jobDescription.location || 'Not specified'}
                           </p>
-                        </div>
-                      )}
+                                </div>
+                          )}
 
                       {/* Matched Skills - Exact match to ResumeAnalysis */}
                       <div>
@@ -762,10 +920,10 @@ const FeedbackDetail = () => {
                           <CheckCircle2 className="w-4 h-4 text-green-600" />
                           Matched Skills ({analysisResult.matchedSkills?.length || 0})
                         </h4>
-                        <div className="space-y-2">
+                                <div className="space-y-2">
                           {(analysisResult.matchedSkills || []).map((skill: any, index: number) => (
                             <div key={skill.skill || index} className="p-2 bg-green-50 rounded border border-green-200">
-                              <div className="flex items-center justify-between mb-1">
+                                      <div className="flex items-center justify-between mb-1">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
                                     {skill.skill || skill.name || skill}
@@ -773,15 +931,15 @@ const FeedbackDetail = () => {
                                   {skill.yearsExperience > 0 && (
                                     <span className="text-xs text-muted-foreground">
                                       {skill.yearsExperience}y exp
-                                    </span>
+                                        </span>
                                   )}
                                 </div>
-                                <Badge 
+                                          <Badge 
                                   variant={skill.strength === 'high' ? 'default' : 'secondary'}
-                                  className="text-xs"
-                                >
+                                            className="text-xs"
+                                          >
                                   {skill.proficiency || 'Intermediate'}
-                                </Badge>
+                                          </Badge>
                               </div>
                               {skill.evidence && (
                                 <p className="text-xs text-muted-foreground mt-1 italic">
@@ -812,18 +970,18 @@ const FeedbackDetail = () => {
                                 >
                                   {skill.importance} priority
                                 </Badge>
-                              </div>
-                              {skill.recommendation && (
+                                      </div>
+                                      {skill.recommendation && (
                                 <p className="text-xs text-muted-foreground mt-1">{skill.recommendation}</p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
                       </div>
 
                       {/* Extra Skills - Exact match to ResumeAnalysis */}
                       {analysisResult.extraSkills && analysisResult.extraSkills.length > 0 && (
-                        <div>
+                                  <div>
                           <h4 className="font-semibold flex items-center gap-2 mb-3">
                             <TrendingUp className="w-4 h-4 text-purple-600" />
                             Extra Skills ({analysisResult.extraSkills.length})
@@ -840,16 +998,16 @@ const FeedbackDetail = () => {
                                     className="text-xs"
                                   >
                                     {skill.relevance} relevance
-                                  </Badge>
-                                </div>
+                                      </Badge>
+                                    </div>
                                 {skill.value && (
                                   <p className="text-xs text-muted-foreground mt-1">{skill.value}</p>
-                                )}
-                              </div>
+                                  )}
+                                </div>
                             ))}
                           </div>
                         </div>
-                      )}
+                          )}
 
                       {/* Strengths - Exact match to ResumeAnalysis */}
                       <div>
@@ -868,7 +1026,7 @@ const FeedbackDetail = () => {
                                 >
                                   {strength.impact || 'medium'} impact
                                 </Badge>
-                              </div>
+                                      </div>
                               <p className="text-sm text-muted-foreground">{strength.description || strength.evidence || strength.strength || strength}</p>
                             </div>
                           ))}
@@ -881,7 +1039,7 @@ const FeedbackDetail = () => {
                           <TrendingUp className="w-4 h-4 text-primary" />
                           Recommendations (Beginner-Friendly)
                         </h4>
-                        <div className="space-y-3">
+                                <div className="space-y-3">
                           {(analysisResult.recommendations || []).slice(0, 3).map((rec: any, index: number) => (
                             <div key={index} className="p-4 border rounded-lg bg-gradient-to-br from-blue-50 to-white">
                               <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -891,7 +1049,7 @@ const FeedbackDetail = () => {
                                   className="text-xs"
                                 >
                                   {rec.priority || 'medium'} priority
-                                </Badge>
+                                      </Badge>
                                 {rec.difficulty && (
                                   <Badge variant="outline" className="text-xs">
                                     {rec.difficulty} level
@@ -902,11 +1060,11 @@ const FeedbackDetail = () => {
                               <div className="flex items-center gap-4 text-xs text-muted-foreground">
                                 {rec.timeEstimate && (
                                   <span>⏱️ Est. time: {rec.timeEstimate}</span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
                       </div>
 
                       {/* ATS Score and Compatibility - Exact match to ResumeAnalysis */}
@@ -919,7 +1077,7 @@ const FeedbackDetail = () => {
                           >
                             {analysisResult.atsCompatibility?.score || 0}%
                           </Badge>
-                        </div>
+                                    </div>
                         <p className="text-xs text-muted-foreground mb-3">
                           Your resume's compatibility with Applicant Tracking Systems (ATS)
                         </p>
@@ -927,15 +1085,15 @@ const FeedbackDetail = () => {
                           <div className="mb-3">
                             <p className="text-xs font-semibold mb-1">Issues Found:</p>
                             <ul className="text-xs text-muted-foreground space-y-1">
-                              {analysisResult.atsCompatibility.issues.map((issue: string, index: number) => (
+                                        {analysisResult.atsCompatibility.issues.map((issue: string, index: number) => (
                                 <li key={index} className="flex items-start gap-2">
                                   <span className="text-orange-600">•</span>
                                   <span>{issue}</span>
                                 </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
                         {analysisResult.atsCompatibility?.suggestions && analysisResult.atsCompatibility.suggestions.length > 0 && (
                           <div>
                             <p className="text-xs font-semibold mb-1">Improvement Suggestions:</p>
@@ -947,8 +1105,8 @@ const FeedbackDetail = () => {
                                 </li>
                               ))}
                             </ul>
-                          </div>
-                        )}
+                                </div>
+                          )}
                       </div>
                     </div>
                   );
@@ -1624,11 +1782,20 @@ const FeedbackDetail = () => {
             )}
 
             {/* HR Tab */}
-            {(sessionReport.modules?.hr || sessionReport.hr) && (
+            {(sessionReport.modules?.hr || sessionReport.hr || (sessionReport.type === 'HR Interview' && sessionReport.feedback)) && (
               <TabsContent value="hr" className="space-y-6">
                 {(() => {
-                  const hrData = sessionReport.hr || sessionReport.modules?.hr;
-                  const finalReport = hrData?.finalReport || {};
+                  const hrData = sessionReport.hr || sessionReport.modules?.hr || (sessionReport.type === 'HR Interview' ? {
+                    finalReport: sessionReport.feedback || {},
+                    gestureAnalysis: sessionReport.feedback?.gestureAnalysis || sessionReport.metadata?.gestureAnalysis || null,
+                    questions: sessionReport.feedback?.questions || [],
+                    responses: {},
+                    textAnalyses: {},
+                    rubricScores: {},
+                    strengths: sessionReport.feedback?.strengths || [],
+                    weaknesses: sessionReport.feedback?.weaknesses || []
+                  } : null);
+                  const finalReport = hrData?.finalReport || sessionReport.feedback || {};
                   
                   return (
                     <>
@@ -1650,8 +1817,13 @@ const FeedbackDetail = () => {
                                 </Badge>
                               </div>
                               <Progress value={Number(finalReport.overallScore || hrData?.overallScore || 0)} className="h-3" />
-                              {finalReport.summary && (
-                                <p className="text-sm text-muted-foreground mt-4">{finalReport.summary}</p>
+                              {(finalReport.overallPerformanceSummary || finalReport.summary) && (
+                                <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                                  <h4 className="font-semibold mb-2">Comprehensive Performance Summary</h4>
+                                  <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                                    {finalReport.overallPerformanceSummary || finalReport.summary}
+                                  </p>
+                                </div>
                               )}
                             </div>
                             
@@ -1807,103 +1979,503 @@ const FeedbackDetail = () => {
                         )}
                       </div>
 
-                      {/* Question-by-Question Breakdown */}
-                      {hrData?.questions && hrData.questions.length > 0 && (
+                      {/* Comprehensive Answer Quality Analysis */}
+                      {finalReport.answerQualityAnalysis && (
                         <Card className="shadow-soft">
                           <CardHeader>
-                            <CardTitle>Question-by-Question Analysis</CardTitle>
+                            <CardTitle className="flex items-center gap-2">
+                              <FileText className="w-5 h-5" />
+                              Answer Quality Analysis
+                            </CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-4">
-                            {hrData.questions.map((question: any, index: number) => {
-                              const questionId = question.id;
-                              const response = hrData.responses?.[questionId];
-                              const textAnalysis = hrData.textAnalyses?.[questionId];
-                              const rubricScore = hrData.rubricScores?.[questionId];
-                              
-                              return (
-                                <div key={questionId || index} className="p-4 border rounded-lg space-y-3">
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2 mb-2">
-                                        <Badge variant="outline">Q{index + 1}</Badge>
-                                        <Badge variant="secondary" className="text-xs">{question.category}</Badge>
+                            {finalReport.answerQualityAnalysis.overallAssessment && (
+                              <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+                                <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Overall Assessment</h4>
+                                <p className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">
+                                  {finalReport.answerQualityAnalysis.overallAssessment}
+                                </p>
+                              </div>
+                            )}
+                            
+                            {finalReport.answerQualityAnalysis.communicationStyle && (
+                              <div className="p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-900">
+                                <h4 className="font-semibold text-purple-900 dark:text-purple-100 mb-2">Communication Style</h4>
+                                <p className="text-sm text-purple-800 dark:text-purple-200 whitespace-pre-wrap">
+                                  {finalReport.answerQualityAnalysis.communicationStyle}
+                                </p>
+                              </div>
+                            )}
+                            
+                            {(finalReport.answerQualityAnalysis.contentRelevance || finalReport.answerQualityAnalysis.contentRelevanceDepth) && (
+                              <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-900">
+                                <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">Content Relevance & Depth</h4>
+                                <p className="text-sm text-green-800 dark:text-green-200 whitespace-pre-wrap">
+                                  {finalReport.answerQualityAnalysis.contentRelevance || finalReport.answerQualityAnalysis.contentRelevanceDepth}
+                                </p>
+                              </div>
+                            )}
+                            
+                            {finalReport.answerQualityAnalysis.examples && finalReport.answerQualityAnalysis.examples.length > 0 && (
+                              <div className="space-y-3">
+                                <h4 className="font-semibold">Key Examples</h4>
+                                {finalReport.answerQualityAnalysis.examples.map((example: any, index: number) => (
+                                  <div key={index} className="p-3 border rounded-lg">
+                                    <p className="font-medium text-sm mb-2">{example.question}</p>
+                                    {example.strength && (
+                                      <div className="mb-2">
+                                        <span className="text-xs font-semibold text-green-700">✓ Strength: </span>
+                                        <span className="text-xs text-green-800">{example.strength}</span>
                                       </div>
-                                      <p className="font-medium mb-2">{question.question}</p>
-                                    </div>
+                                    )}
+                                    {example.improvement && (
+                                      <div>
+                                        <span className="text-xs font-semibold text-yellow-700">⚠ Improvement: </span>
+                                        <span className="text-xs text-yellow-800">{example.improvement}</span>
+                                      </div>
+                                    )}
                                   </div>
-                                  
-                                  {response && (
-                                    <div className="p-3 bg-muted rounded-lg">
-                                      <p className="text-sm font-medium mb-1">Your Response:</p>
-                                      <p className="text-sm">{typeof response === 'string' ? response : response.text || ''}</p>
-                                    </div>
-                                  )}
-                                  
-                                  {textAnalysis && (
-                                    <div className="grid md:grid-cols-3 gap-3 text-xs">
-                                      {textAnalysis.fluency && (
-                                        <div>
-                                          <span className="text-muted-foreground">Fluency: </span>
-                                          <span className="font-medium">{Number(textAnalysis.fluency.score || 0)}%</span>
-                                        </div>
-                                      )}
-                                      {textAnalysis.content && (
-                                        <div>
-                                          <span className="text-muted-foreground">Content: </span>
-                                          <span className="font-medium">{Number(textAnalysis.content.score || 0)}%</span>
-                                        </div>
-                                      )}
-                                      {textAnalysis.language && (
-                                        <div>
-                                          <span className="text-muted-foreground">Language: </span>
-                                          <span className="font-medium">{Number(textAnalysis.language.score || 0)}%</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                  
-                                  {rubricScore && (
-                                    <div className="flex items-center gap-4 text-xs">
-                                      {Object.entries(rubricScore).map(([key, value]: [string, any]) => (
-                                        <div key={key} className="flex items-center gap-1">
-                                          <span className="text-muted-foreground capitalize">{key}:</span>
-                                          <span className="font-medium">{Number(value)}%</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
+                                ))}
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       )}
 
-                      {/* Recommendations */}
+                      {/* What to Avoid */}
+                      {finalReport.whatToAvoid && finalReport.whatToAvoid.length > 0 && (
+                        <Card className="shadow-soft border-red-200">
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-red-700">
+                              <AlertTriangle className="w-5 h-5" />
+                              What to Avoid
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-4">
+                              {finalReport.whatToAvoid.map((item: any, index: number) => (
+                                <div key={index} className="p-4 border border-red-200 rounded-lg bg-red-50/50">
+                                  <div className="flex items-start gap-3">
+                                    <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <h4 className="font-semibold text-red-900 mb-2">{item.issue}</h4>
+                                      {item.example && (
+                                        <div className="mb-2">
+                                          <span className="text-xs font-medium text-red-800">Example: </span>
+                                          <span className="text-xs text-red-700">{item.example}</span>
+                                        </div>
+                                      )}
+                                      {item.alternative && (
+                                        <div className="p-2 bg-white rounded border border-green-200">
+                                          <span className="text-xs font-medium text-green-800">✓ Do this instead: </span>
+                                          <span className="text-xs text-green-700">{item.alternative}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Key Takeaways */}
+                      {finalReport.keyTakeaways && finalReport.keyTakeaways.length > 0 && (
+                        <Card className="shadow-soft">
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <Lightbulb className="w-5 h-5 text-yellow-600" />
+                              Key Takeaways
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <ul className="space-y-2">
+                              {finalReport.keyTakeaways.map((takeaway: string, index: number) => (
+                                <li key={index} className="flex items-start gap-2 text-sm">
+                                  <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                  <span>{takeaway}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Gesture Analysis - Detailed */}
+                      {(() => {
+                        // Try multiple paths to find gesture data
+                        // Check all possible locations where gesture data might be stored
+                        let gestureData = hrData?.gestureAnalysis || 
+                                          finalReport?.gestureAnalysis || 
+                                          hrData?.rawFeedback?.gestureAnalysis ||
+                                          sessionReport.feedback?.gestureAnalysis ||
+                                          sessionReport.metadata?.gestureAnalysis ||
+                                          (sessionReport as any)?.feedback?.gestureAnalysis ||
+                                          (sessionReport as any)?.metadata?.gestureAnalysis ||
+                                          (hrData?.finalReport as any)?.gestureAnalysis;
+                        
+                        // Deep search for gesture data
+                        const allPossiblePaths: any = {
+                          'hrData?.gestureAnalysis': hrData?.gestureAnalysis,
+                          'finalReport?.gestureAnalysis': finalReport?.gestureAnalysis,
+                          'hrData?.rawFeedback?.gestureAnalysis': hrData?.rawFeedback?.gestureAnalysis,
+                          'sessionReport.feedback?.gestureAnalysis': sessionReport.feedback?.gestureAnalysis,
+                          'sessionReport.metadata?.gestureAnalysis': sessionReport.metadata?.gestureAnalysis,
+                          'sessionReport.modules?.hr?.gestureAnalysis': (sessionReport as any)?.modules?.hr?.gestureAnalysis,
+                        };
+                        
+                        // Also search in components if they exist
+                        if (sessionReport.components && Array.isArray(sessionReport.components)) {
+                          sessionReport.components.forEach((comp: any, idx: number) => {
+                            if (comp.feedback?.gestureAnalysis) {
+                              allPossiblePaths[`sessionReport.components[${idx}].feedback.gestureAnalysis`] = comp.feedback.gestureAnalysis;
+                              if (!gestureData) gestureData = comp.feedback.gestureAnalysis;
+                            }
+                            if (comp.data?.gestureAnalysis) {
+                              allPossiblePaths[`sessionReport.components[${idx}].data.gestureAnalysis`] = comp.data.gestureAnalysis;
+                              if (!gestureData) gestureData = comp.data.gestureAnalysis;
+                            }
+                          });
+                        }
+                        
+                        // Check raw response
+                        const rawResponse = (window as any).__lastSessionResponse;
+                        if (rawResponse) {
+                          allPossiblePaths['rawResponse.feedback?.gestureAnalysis'] = rawResponse.feedback?.gestureAnalysis;
+                          allPossiblePaths['rawResponse.metadata?.gestureAnalysis'] = rawResponse.metadata?.gestureAnalysis;
+                          if (!gestureData) {
+                            gestureData = rawResponse.feedback?.gestureAnalysis || rawResponse.metadata?.gestureAnalysis;
+                          }
+                        }
+                        
+                        console.log('🔍 Gesture data lookup (all paths):', allPossiblePaths);
+                        console.log('Full sessionReport keys:', Object.keys(sessionReport));
+                        console.log('hrData structure:', hrData);
+                        console.log('finalReport structure:', finalReport);
+                        console.log('Selected gestureData:', gestureData);
+                        
+                        // If no processed gesture data, try to use raw data from metadata and process it client-side
+                        if (!gestureData) {
+                          const rawGestureData = sessionReport.metadata?.gestureAnalysis || 
+                                                 (window as any).__lastSessionResponse?.metadata?.gestureAnalysis;
+                          
+                          if (rawGestureData && (rawGestureData.eyeContact || rawGestureData.expressions || rawGestureData.handMovements || rawGestureData.headPose)) {
+                            console.log('📦 Found raw gesture data, processing client-side...', rawGestureData);
+                            // Process raw data into displayable format
+                            gestureData = {
+                              eyeContact: {
+                                percentage: rawGestureData.eyeContact?.percentage || 0,
+                                rating: rawGestureData.eyeContact?.percentage >= 70 ? 'Excellent' : 
+                                        rawGestureData.eyeContact?.percentage >= 50 ? 'Good' : 
+                                        rawGestureData.eyeContact?.percentage >= 30 ? 'Fair' : 'Needs Improvement',
+                                feedback: rawGestureData.eyeContact?.percentage >= 70 ? 
+                                          'Excellent eye contact maintained throughout the interview.' :
+                                          rawGestureData.eyeContact?.percentage >= 50 ?
+                                          'Good eye contact overall. Consider maintaining more consistent eye contact.' :
+                                          'Eye contact could be improved. Try to look at the camera more frequently.'
+                              },
+                              expressions: {
+                                summary: rawGestureData.expressions || {},
+                                dominant: Object.keys(rawGestureData.expressions || {}).reduce((a, b) => 
+                                  (rawGestureData.expressions[a] || 0) > (rawGestureData.expressions[b] || 0) ? a : b, 'neutral') || 'neutral',
+                                feedback: 'Expression analysis based on detected facial expressions during the interview.'
+                              },
+                              handMovements: {
+                                summary: {
+                                  breakdown: rawGestureData.handMovements || {},
+                                  totalGestures: Object.values(rawGestureData.handMovements || {}).reduce((a: number, b: number) => a + b, 0)
+                                },
+                                feedback: 'Hand movement analysis based on detected gestures during the interview.'
+                              },
+                              headPose: {
+                                summary: {
+                                  breakdown: rawGestureData.headPose || {},
+                                  totalChanges: Object.values(rawGestureData.headPose || {}).reduce((a: number, b: number) => a + b, 0)
+                                },
+                                feedback: 'Head posture analysis based on detected head movements during the interview.'
+                              }
+                            };
+                            console.log('✅ Processed raw gesture data:', gestureData);
+                          }
+                        }
+                        
+                        if (!gestureData) {
+                          console.warn('⚠️ No gesture data found in any location');
+                          console.log('Full sessionReport structure:', JSON.stringify(sessionReport, null, 2));
+                          return (
+                            <Card className="shadow-soft border-yellow-300">
+                              <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-yellow-700">
+                                  <Eye className="w-5 h-5" />
+                                  Gesture & Body Language Analysis
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <p className="text-sm text-muted-foreground">
+                                  Gesture analysis data is not available for this session. This may occur if:
+                                </p>
+                                <ul className="list-disc list-inside mt-2 text-sm text-muted-foreground space-y-1">
+                                  <li>Gesture tracking was not enabled during the interview</li>
+                                  <li>The session was completed before gesture data was collected</li>
+                                  <li>There was an error storing the gesture data</li>
+                                </ul>
+                                <div className="mt-4 p-3 bg-yellow-50 rounded-lg">
+                                  <p className="text-xs font-mono text-yellow-800">
+                                    Debug: Check console for detailed lookup paths
+                                  </p>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        }
+                        
+                        console.log('✅ Gesture data found! Structure:', {
+                          'eyeContact': gestureData.eyeContact,
+                          'expressions': gestureData.expressions,
+                          'handMovements': gestureData.handMovements,
+                          'headPose': gestureData.headPose,
+                          'fullData': gestureData
+                        });
+                        
+                        return (
+                          <Card className="shadow-soft">
+                            <CardHeader>
+                              <CardTitle className="flex items-center gap-2">
+                                <Eye className="w-5 h-5" />
+                                Detailed Gesture & Body Language Analysis
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                              {/* Eye Contact - Detailed */}
+                              {gestureData.eyeContact && (
+                                <div className="p-4 border rounded-lg space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-semibold text-lg">Eye Contact</span>
+                                    <Badge variant={gestureData.eyeContact.percentage >= 70 ? 'default' : gestureData.eyeContact.percentage >= 50 ? 'secondary' : 'destructive'} className="text-base px-3 py-1">
+                                      {Number(gestureData.eyeContact.percentage || 0).toFixed(1)}%
+                                    </Badge>
+                                  </div>
+                                  <Progress value={Number(gestureData.eyeContact.percentage || 0)} className="h-3" />
+                                  <div className="space-y-2">
+                                    {gestureData.eyeContact.rating && (
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium">Rating:</span>
+                                        <Badge variant="outline">{gestureData.eyeContact.rating}</Badge>
+                                      </div>
+                                    )}
+                                    {gestureData.eyeContact.feedback && (
+                                      <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+                                        <p className="text-sm text-blue-800 dark:text-blue-200">{gestureData.eyeContact.feedback}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Expressions - Detailed */}
+                              {gestureData.expressions && (
+                                <div className="p-4 border rounded-lg space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-semibold text-lg">Facial Expressions</span>
+                                    <Badge variant="outline" className="capitalize text-base px-3 py-1">
+                                      {gestureData.expressions.dominant || 'Neutral'}
+                                    </Badge>
+                                  </div>
+                                  
+                                  {(gestureData.expressions.summary || (typeof gestureData.expressions.summary === 'object' && Object.keys(gestureData.expressions.summary).length > 0)) ? (
+                                    <div className="space-y-2">
+                                      <h5 className="text-sm font-medium text-muted-foreground">Time Distribution:</h5>
+                                      {Object.entries(gestureData.expressions.summary).map(([expr, percentage]: [string, any]) => (
+                                        <div key={expr} className="flex items-center justify-between p-2 bg-muted rounded">
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-sm font-medium capitalize">{expr}:</span>
+                                          </div>
+                                          <div className="flex items-center gap-3">
+                                            <Progress value={Number(percentage)} className="w-24 h-2" />
+                                            <span className="text-sm font-medium w-16 text-right">{Number(percentage)}%</span>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : gestureData.expressions.counts ? (
+                                    // Fallback: Show raw counts if summary not available
+                                    <div className="space-y-2">
+                                      <h5 className="text-sm font-medium text-muted-foreground">Expression Counts:</h5>
+                                      {Object.entries(gestureData.expressions.counts).map(([expr, count]: [string, any]) => (
+                                        <div key={expr} className="flex items-center justify-between p-2 bg-muted rounded">
+                                          <span className="text-sm font-medium capitalize">{expr}:</span>
+                                          <Badge variant="outline">{Number(count)} times</Badge>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                  
+                                  {gestureData.expressions.feedback && (
+                                    <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+                                      <p className="text-sm text-blue-800 dark:text-blue-200">{gestureData.expressions.feedback}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Hand Movements - Detailed */}
+                              {gestureData.handMovements && (
+                                <div className="p-4 border rounded-lg space-y-3">
+                                  <span className="font-semibold text-lg block">Hand Movements & Gestures</span>
+                                  
+                                  {(() => {
+                                    // Get hand movement data from various possible structures
+                                    const handData = gestureData.handMovements.summary?.breakdown || 
+                                                    gestureData.handMovements.summary || 
+                                                    gestureData.handMovements.gestures ||
+                                                    gestureData.handMovements;
+                                    
+                                    // Filter out non-numeric values and get actual gesture counts
+                                    const gestureCounts = Object.entries(handData || {})
+                                      .filter(([_, count]) => typeof count === 'number' && count > 0)
+                                      .sort(([_, a]: [string, any], [__, b]: [string, any]) => b - a);
+                                    
+                                    if (gestureCounts.length > 0) {
+                                      const totalGestures = gestureCounts.reduce((sum, [_, count]: [string, any]) => sum + count, 0);
+                                      
+                                      return (
+                                        <div className="space-y-2">
+                                          <h5 className="text-sm font-medium text-muted-foreground">Detected Gestures:</h5>
+                                          {gestureCounts.map(([gesture, count]: [string, any]) => (
+                                            <div key={gesture} className="flex items-center justify-between p-2 bg-muted rounded">
+                                              <span className="text-sm font-medium capitalize">{gesture.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                                              <Badge variant="outline">{Number(count)} {Number(count) === 1 ? 'time' : 'times'}</Badge>
+                                            </div>
+                                          ))}
+                                          <div className="mt-2 pt-2 border-t">
+                                            <div className="flex items-center justify-between">
+                                              <span className="text-sm font-medium">Total Gesture Detections:</span>
+                                              <span className="text-sm font-bold">{totalGestures}</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      );
+                                    } else {
+                                      return (
+                                        <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-900">
+                                          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                            No hand gestures detected during the interview. This may indicate hands were not visible or kept still.
+                                          </p>
+                                        </div>
+                                      );
+                                    }
+                                  })()}
+                                  
+                                  {gestureData.handMovements.feedback && (
+                                    <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+                                      <p className="text-sm text-blue-800 dark:text-blue-200">{gestureData.handMovements.feedback}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Head Pose - Detailed */}
+                              {gestureData.headPose && (
+                                <div className="p-4 border rounded-lg space-y-3">
+                                  <span className="font-semibold text-lg block">Head Posture & Movement</span>
+                                  
+                                  {(() => {
+                                    // Get head pose data from various possible structures
+                                    const poseData = gestureData.headPose.summary?.breakdown || 
+                                                    gestureData.headPose.summary || 
+                                                    gestureData.headPose.counts ||
+                                                    gestureData.headPose;
+                                    
+                                    // Filter out non-numeric values and get actual pose counts
+                                    const poseCounts = Object.entries(poseData || {})
+                                      .filter(([_, count]) => typeof count === 'number' && count > 0)
+                                      .sort(([_, a]: [string, any], [__, b]: [string, any]) => b - a);
+                                    
+                                    if (poseCounts.length > 0) {
+                                      const totalPoses = poseCounts.reduce((sum, [_, count]: [string, any]) => sum + count, 0);
+                                      
+                                      return (
+                                        <div className="space-y-2">
+                                          <h5 className="text-sm font-medium text-muted-foreground">Head Position Changes:</h5>
+                                          {poseCounts.map(([pose, count]: [string, any]) => (
+                                            <div key={pose} className="flex items-center justify-between p-2 bg-muted rounded">
+                                              <span className="text-sm font-medium capitalize">{pose === 'forward' ? 'Looking Forward' : pose === 'left' ? 'Turned Left' : pose === 'right' ? 'Turned Right' : pose === 'up' ? 'Looking Up' : pose === 'down' ? 'Looking Down' : pose}:</span>
+                                              <Badge variant="outline">{Number(count)} {Number(count) === 1 ? 'time' : 'times'}</Badge>
+                                            </div>
+                                          ))}
+                                          <div className="mt-2 pt-2 border-t">
+                                            <div className="flex items-center justify-between">
+                                              <span className="text-sm font-medium">Total Head Movements:</span>
+                                              <span className="text-sm font-bold">{totalPoses}</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      );
+                                    } else {
+                                      return (
+                                        <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-900">
+                                          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                            No significant head movements detected. This may indicate a very stable head position during the interview.
+                                          </p>
+                                        </div>
+                                      );
+                                    }
+                                  })()}
+                                  
+                                  {gestureData.headPose.feedback && (
+                                    <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+                                      <p className="text-sm text-blue-800 dark:text-blue-200">{gestureData.headPose.feedback}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        );
+                      })()}
+
+                      {/* Detailed Recommendations */}
                       {finalReport.recommendations && finalReport.recommendations.length > 0 && (
                         <Card className="shadow-soft">
                           <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                              <Lightbulb className="w-5 h-5" />
-                              Recommendations
+                              <Lightbulb className="w-5 h-5 text-yellow-600" />
+                              Detailed Recommendations
                             </CardTitle>
                           </CardHeader>
                           <CardContent>
-                            <ul className="space-y-3">
+                            <div className="space-y-4">
                               {finalReport.recommendations.map((rec: any, index: number) => (
-                                <li key={index} className="flex items-start gap-3 p-3 border rounded-lg">
-                                  <Badge variant={rec.priority === 'high' ? 'destructive' : rec.priority === 'medium' ? 'default' : 'secondary'} className="mt-0.5">
-                                    {rec.priority || 'medium'}
-                                  </Badge>
-                                  <div className="flex-1">
-                                    <p className="text-sm font-medium">{typeof rec === 'string' ? rec : rec.recommendation}</p>
-                                    {typeof rec === 'object' && rec.reason && (
-                                      <p className="text-xs text-muted-foreground mt-1">{rec.reason}</p>
-                                    )}
+                                <div key={index} className="p-4 border rounded-lg bg-gradient-to-br from-yellow-50 to-white">
+                                  <div className="flex items-start justify-between mb-2">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <Badge 
+                                          variant={rec.priority === 'high' ? 'destructive' : rec.priority === 'medium' ? 'default' : 'secondary'}
+                                          className="text-xs"
+                                        >
+                                          {rec.priority || 'medium'} priority
+                                        </Badge>
+                                        {rec.category && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {rec.category}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <h4 className="font-semibold text-sm mb-1">
+                                        {rec.recommendation || rec.suggestion || `Recommendation ${index + 1}`}
+                                      </h4>
+                                      {rec.reason && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          {rec.reason}
+                                        </p>
+                                      )}
+                                    </div>
                                   </div>
-                                </li>
+                                </div>
                               ))}
-                            </ul>
+                            </div>
                           </CardContent>
                         </Card>
                       )}

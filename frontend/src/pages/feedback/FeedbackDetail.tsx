@@ -306,7 +306,7 @@ const FeedbackDetail = () => {
 
   if (loading) {
     return (
-      <Layout isAuthenticated={true} user={{ fullName: user.fullName, profilePicture: user.profilePicture }}>
+      <Layout>
         <div className="container mx-auto px-6 py-8">
           <div className="max-w-2xl mx-auto text-center">
             <Card className="shadow-soft">
@@ -326,7 +326,7 @@ const FeedbackDetail = () => {
 
   if (error || !sessionReport) {
     return (
-      <Layout isAuthenticated={true} user={{ fullName: user.fullName, profilePicture: user.profilePicture }}>
+      <Layout>
         <div className="container mx-auto px-6 py-8">
           <div className="max-w-2xl mx-auto text-center">
             <Card className="shadow-soft">
@@ -405,7 +405,7 @@ const FeedbackDetail = () => {
   };
 
   return (
-    <Layout isAuthenticated={true} user={{ fullName: user.fullName, profilePicture: user.profilePicture }}>
+    <Layout>
       <div className="container mx-auto px-6 py-8">
         <div className="max-w-6xl mx-auto">
           {/* Back Button */}
@@ -660,6 +660,9 @@ const FeedbackDetail = () => {
                     const moduleInfo = moduleNames[moduleKey as keyof typeof moduleNames];
                     if (!moduleInfo || !moduleData) return null;
                     
+                    // Type assertion for moduleData to fix TypeScript errors
+                    const typedModuleData = moduleData as { duration?: number; score?: number };
+                    
                     const Icon = moduleInfo.icon;
                     
                     return (
@@ -672,15 +675,15 @@ const FeedbackDetail = () => {
                             <div>
                               <h3 className="font-semibold">{moduleInfo.name}</h3>
                               <p className="text-sm text-muted-foreground">
-                                {formatDuration(moduleData.duration || 0)}
+                                {formatDuration(typedModuleData.duration || 0)}
                               </p>
                             </div>
                           </div>
                           <div className="flex items-center justify-between">
-                            <div className={`text-2xl font-bold ${getScoreColor(moduleData.score)}`}>
-                              {Number(moduleData.score) || 0}%
+                            <div className={`text-2xl font-bold ${getScoreColor(typedModuleData.score)}`}>
+                              {Number(typedModuleData.score) || 0}%
                             </div>
-                            <Progress value={Number(moduleData.score) || 0} className="w-20" />
+                            <Progress value={Number(typedModuleData.score) || 0} className="w-20" />
                           </div>
                         </CardContent>
                       </Card>

@@ -26,7 +26,8 @@ import {
   Eye,
   Lightbulb,
   Loader2,
-  Briefcase
+  Briefcase,
+  Database
 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import feedbackData from "@/mock/feedback.json";
@@ -146,6 +147,7 @@ const FeedbackDetail = () => {
             weaknesses: codingComponent.feedback?.weaknesses || [],
             problem: codingComponent.data?.problem || sessionData.feedback?.detailedAnalysis?.coding?.problemAnalysis || {},
             solution: codingComponent.data?.solution,
+            failedTestCases: codingComponent.data?.testResults?.cases?.filter((c: any) => !c.passed) || [],
             testCaseBreakdown: codingComponent.feedback?.testCaseBreakdown || sessionData.feedback?.detailedAnalysis?.coding?.testCaseBreakdown || [],
             feedback: codingComponent.feedback || sessionData.feedback?.codingAnalysis || {}
           } : null,
@@ -217,9 +219,12 @@ const FeedbackDetail = () => {
               } : null,
               coding: codingComponent || sessionData.feedback?.detailedAnalysis?.coding ? {
                 score: codingComponent?.score || codingComponent?.feedback?.overallScore || sessionData.feedback?.codingScore || sessionData.feedback?.detailedAnalysis?.coding?.performance?.score || 0,
+                problemsSolved: codingComponent?.feedback?.problemsSolved || (codingComponent?.data?.testResults?.allPassed ? 1 : 0) || 0,
+                totalProblems: codingComponent?.feedback?.totalProblems || 1,
                 testCasesPassed: codingComponent?.feedback?.testCasesPassed || codingComponent?.data?.testResults?.passed || sessionData.feedback?.detailedAnalysis?.coding?.performance?.testCasesPassed || 0,
                 totalTestCases: codingComponent?.feedback?.totalTestCases || codingComponent?.data?.testResults?.total || sessionData.feedback?.detailedAnalysis?.coding?.performance?.testCasesTotal || 0,
                 codeQuality: codingComponent?.feedback?.codeQuality || codingComponent?.feedback?.codeQuality?.overallQuality || sessionData.feedback?.detailedAnalysis?.coding?.codeQuality?.overallQuality || 0,
+                efficiency: codingComponent?.feedback?.efficiency || sessionData.feedback?.detailedAnalysis?.coding?.codeQuality?.efficiency || 0,
                 summary: codingComponent?.feedback?.summary || codingComponent?.feedback?.detailedFeedback || '',
                 testCaseBreakdown: codingComponent?.feedback?.testCaseBreakdown || sessionData.feedback?.detailedAnalysis?.coding?.testCaseBreakdown || []
               } : null
@@ -365,14 +370,19 @@ const FeedbackDetail = () => {
   };
 
   const formatDuration = (seconds: number | undefined) => {
-    if (seconds === undefined || seconds === null || isNaN(Number(seconds))) return '0m';
+    if (seconds === undefined || seconds === null || isNaN(Number(seconds))) return '0m 0s';
     const secs = Number(seconds);
     const hours = Math.floor(secs / 3600);
     const minutes = Math.floor((secs % 3600) / 60);
+    const remainingSeconds = Math.floor(secs % 60);
+    
     if (hours > 0) {
-      return `${hours}h ${minutes}m`;
+      return `${hours}h ${minutes}m ${remainingSeconds}s`;
     }
-    return `${minutes}m`;
+    if (minutes > 0) {
+      return `${minutes}m ${remainingSeconds}s`;
+    }
+    return `${remainingSeconds}s`;
   };
 
   const getScoreColor = (score: number | undefined) => {
@@ -499,8 +509,16 @@ const FeedbackDetail = () => {
             </CardContent>
           </Card>
 
-          {/* Overall Summary - Simplified */}
-          {sessionReport.summary && sessionReport.summary !== 'No summary available' && (
+          {/* Overall Summary - Comprehensive */}
+          {(() => {
+            // Get comprehensive summary from HR module if available
+            const hrData = sessionReport.hr || sessionReport.modules?.hr;
+            const finalReport = hrData?.finalReport || sessionReport.feedback || {};
+            const comprehensiveSummary = finalReport.overallPerformanceSummary || sessionReport.summary;
+            
+            if (!comprehensiveSummary || comprehensiveSummary === 'No summary available') return null;
+            
+            return (
             <Card className="shadow-soft mb-8 border-l-4 border-l-primary">
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
@@ -509,14 +527,23 @@ const FeedbackDetail = () => {
                   </div>
                   <div className="flex-1">
                     <h2 className="text-lg font-semibold mb-2">Performance Summary</h2>
-                    <p className="text-muted-foreground leading-relaxed">
-                      {sessionReport.summary}
-                    </p>
+                      <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
+                        {comprehensiveSummary}
+                      </p>
+                      {finalReport.overallPerformanceSummary && (
+                        <div className="mt-4 pt-4 border-t">
+                          <p className="text-sm text-muted-foreground italic">
+                            This summary combines your answer quality, communication style, non-verbal cues, and overall professionalism. 
+                            Review the detailed sections below for specific feedback on each aspect.
+                          </p>
+                        </div>
+                      )}
                   </div>
                 </div>
               </CardContent>
             </Card>
-          )}
+            );
+          })()}
 
           {/* Module Breakdown */}
           <Tabs defaultValue="overview" className="space-y-6">
@@ -592,13 +619,6 @@ const FeedbackDetail = () => {
                                 {Number(sessionReport.modules?.technical?.coding?.testCasesPassed) || 0} / {Number(sessionReport.modules?.technical?.coding?.totalTestCases) || 0}
                               </span>
                             </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-muted-foreground">Code Quality:</span>
-                              <div className="flex items-center gap-2">
-                                <Progress value={Number(sessionReport.modules?.technical?.coding?.codeQuality) || 0} className="w-16 h-2" />
-                                <span className="text-sm">{Number(sessionReport.modules?.technical?.coding?.codeQuality) || 0}%</span>
-                              </div>
-                            </div>
                             {sessionReport.modules?.technical?.coding?.summary && (
                               <p className="text-xs text-muted-foreground mt-2">{sessionReport.modules.technical.coding.summary}</p>
                             )}
@@ -645,51 +665,6 @@ const FeedbackDetail = () => {
                   </CardContent>
                 </Card>
               )}
-
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Module Scores */}
-                {sessionReport.modules && Object.entries(sessionReport.modules)
-                  .filter(([_, moduleData]) => moduleData !== null && moduleData !== undefined)
-                  .map(([moduleKey, moduleData]) => {
-                    const moduleNames = {
-                      resume: { name: "Resume Analysis", icon: FileText },
-                      technical: { name: "Technical Interview", icon: Code2 },
-                      hr: { name: "HR Interview", icon: MessageSquare }
-                    };
-                    
-                    const moduleInfo = moduleNames[moduleKey as keyof typeof moduleNames];
-                    if (!moduleInfo || !moduleData) return null;
-                    
-                    // Type assertion for moduleData to fix TypeScript errors
-                    const typedModuleData = moduleData as { duration?: number; score?: number };
-                    
-                    const Icon = moduleInfo.icon;
-                    
-                    return (
-                      <Card key={moduleKey} className="shadow-soft">
-                        <CardContent className="p-6">
-                          <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                              <Icon className="w-5 h-5 text-primary" />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold">{moduleInfo.name}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                {formatDuration(typedModuleData.duration || 0)}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div className={`text-2xl font-bold ${getScoreColor(typedModuleData.score)}`}>
-                              {Number(typedModuleData.score) || 0}%
-                            </div>
-                            <Progress value={Number(typedModuleData.score) || 0} className="w-20" />
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-              </div>
 
               {/* Recommendations */}
               {sessionReport.recommendations && Array.isArray(sessionReport.recommendations) && sessionReport.recommendations.length > 0 && (
@@ -1127,39 +1102,40 @@ const FeedbackDetail = () => {
                       <CardHeader>
                         <CardTitle>Multiple Choice Questions</CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-4">
+                      <CardContent className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <span>Score:</span>
+                          <span className="text-sm">Score:</span>
                           <Badge variant={getScoreBadgeVariant(sessionReport.modules?.technical?.mcq?.score)}>
                             {Number(sessionReport.modules?.technical?.mcq?.score) || 0}%
                           </Badge>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span>Correct Answers:</span>
-                          <span>{Number(sessionReport.modules?.technical?.mcq?.correctAnswers) || 0} / {Number(sessionReport.modules?.technical?.mcq?.totalQuestions) || 0}</span>
+                          <span className="text-sm">Correct Answers:</span>
+                          <span className="text-sm font-medium">{Number(sessionReport.modules?.technical?.mcq?.correctAnswers) || 0} / {Number(sessionReport.modules?.technical?.mcq?.totalQuestions) || 0}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span>Time Spent:</span>
-                          <span>{formatDuration(Number(sessionReport.modules?.technical?.mcq?.timeSpent) || 0)}</span>
+                          <span className="text-sm">Time Spent:</span>
+                          <span className="text-sm font-medium">{formatDuration(Number(sessionReport.modules?.technical?.mcq?.timeSpent) || 0)}</span>
                         </div>
                         
+                        {sessionReport.modules?.technical?.mcq?.categoryBreakdown && Object.keys(sessionReport.modules?.technical?.mcq?.categoryBreakdown).length > 0 && (
+                          <>
                         <Separator />
-                        
-                        {sessionReport.modules?.technical?.mcq?.categoryBreakdown && (
                           <div>
-                            <h4 className="font-medium mb-2">Category Breakdown:</h4>
+                              <h4 className="font-medium text-sm mb-2">Category Breakdown:</h4>
                             <div className="space-y-2">
                               {Object.entries(sessionReport.modules?.technical?.mcq?.categoryBreakdown || {}).map(([category, data]: [string, any]) => (
                                 <div key={category} className="flex items-center justify-between">
-                                  <span className="text-sm">{category}:</span>
+                                    <span className="text-xs text-muted-foreground">{category}:</span>
                                   <div className="flex items-center gap-2">
-                                    <Progress value={data.score || 0} className="w-16 h-2" />
-                                    <span className="text-sm">{data.score || 0}%</span>
+                                      <Progress value={data.score || 0} className="w-20 h-2" />
+                                      <span className="text-xs">{data.score || 0}%</span>
                                   </div>
                                 </div>
                               ))}
                             </div>
                           </div>
+                          </>
                         )}
                       </CardContent>
                     </Card>
@@ -1171,35 +1147,22 @@ const FeedbackDetail = () => {
                       <CardHeader>
                         <CardTitle>Coding Challenge</CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-4">
+                      <CardContent className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <span>Score:</span>
+                          <span className="text-sm">Score:</span>
                           <Badge variant={getScoreBadgeVariant(sessionReport.modules?.technical?.coding?.score)}>
                             {Number(sessionReport.modules?.technical?.coding?.score) || 0}%
                           </Badge>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span>Problems Solved:</span>
-                          <span>{Number(sessionReport.modules?.technical?.coding?.problemsSolved) || 0} / {Number(sessionReport.modules?.technical?.coding?.totalProblems) || 0}</span>
+                          <span className="text-sm">Test Cases Passed:</span>
+                          <span className="text-sm font-medium">
+                            {Number(sessionReport.modules?.technical?.coding?.testCasesPassed) || 0} / {Number(sessionReport.modules?.technical?.coding?.totalTestCases) || 0}
+                          </span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span>Code Quality:</span>
-                          <div className="flex items-center gap-2">
-                            <Progress value={Number(sessionReport.modules?.technical?.coding?.codeQuality) || 0} className="w-16 h-2" />
-                            <span className="text-sm">{Number(sessionReport.modules?.technical?.coding?.codeQuality) || 0}%</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Efficiency:</span>
-                          <div className="flex items-center gap-2">
-                            <Progress value={Number(sessionReport.modules?.technical?.coding?.efficiency) || 0} className="w-16 h-2" />
-                            <span className="text-sm">{Number(sessionReport.modules?.technical?.coding?.efficiency) || 0}%</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Test Cases Passed:</span>
-                          <span>{Number(sessionReport.modules?.technical?.coding?.testCasesPassed) || 0} / {Number(sessionReport.modules?.technical?.coding?.totalTestCases) || 0}</span>
-                        </div>
+                        {sessionReport.modules?.technical?.coding?.summary && (
+                          <p className="text-xs text-muted-foreground mt-2">{sessionReport.modules.technical.coding.summary}</p>
+                        )}
                       </CardContent>
                     </Card>
                   )}
@@ -1362,15 +1325,105 @@ const FeedbackDetail = () => {
                         </div>
                       )}
 
+                      {/* Test Cases Results */}
+                      <div>
+                        <h4 className="font-semibold mb-3">Test Cases</h4>
+                        <div className="grid md:grid-cols-2 gap-4 mb-4">
+                          <div className="p-4 border border-green-200 rounded-lg bg-green-50/50">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">Passed</span>
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                                <span className="text-2xl font-bold text-green-600">
+                                  {sessionReport.coding.testCasesPassed || 0}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="p-4 border border-red-200 rounded-lg bg-red-50/50">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">Failed</span>
+                              <div className="flex items-center gap-2">
+                                <AlertCircle className="w-5 h-5 text-red-600" />
+                                <span className="text-2xl font-bold text-red-600">
+                                  {(sessionReport.coding.totalTestCases || 0) - (sessionReport.coding.testCasesPassed || 0)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Failed Test Cases Details */}
+                        {sessionReport.coding.failedTestCases && sessionReport.coding.failedTestCases.length > 0 && (
+                          <div className="space-y-3">
+                            <h5 className="font-medium text-sm text-red-700">Failed Test Cases:</h5>
+                            {sessionReport.coding.failedTestCases.map((testCase: any, index: number) => (
+                              <div key={index} className="p-3 border border-red-200 rounded-lg bg-red-50/30">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="destructive" className="text-xs">
+                                    Test Case {testCase.caseNumber || index + 1}
+                                  </Badge>
+                                  {testCase.errorType && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {testCase.errorType}
+                                    </Badge>
+                                  )}
+                                </div>
+                                {testCase.input && (
+                                  <div className="text-xs mb-1">
+                                    <span className="font-medium">Input:</span> <code className="bg-slate-100 px-1 rounded">{JSON.stringify(testCase.input)}</code>
+                                  </div>
+                                )}
+                                {testCase.expectedOutput && (
+                                  <div className="text-xs mb-1">
+                                    <span className="font-medium">Expected:</span> <code className="bg-green-100 px-1 rounded">{JSON.stringify(testCase.expectedOutput)}</code>
+                                  </div>
+                                )}
+                                {testCase.actualOutput && (
+                                  <div className="text-xs mb-1">
+                                    <span className="font-medium">Your Output:</span> <code className="bg-red-100 px-1 rounded">{JSON.stringify(testCase.actualOutput)}</code>
+                                  </div>
+                                )}
+                                {testCase.error && (
+                                  <div className="text-xs text-red-700 mt-2">
+                                    <span className="font-medium">Error:</span> {testCase.error}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
                       {/* Complexity Analysis */}
                       <div className="grid md:grid-cols-2 gap-4">
                         <div className="p-4 border rounded-lg">
-                          <h4 className="font-semibold mb-2">Time Complexity</h4>
-                          <p className="text-2xl font-mono">{sessionReport.coding.timeComplexity}</p>
+                          <h4 className="font-semibold mb-2 flex items-center gap-2">
+                            <Clock className="w-4 h-4" />
+                            Time Complexity
+                          </h4>
+                          {sessionReport.coding.timeComplexity && sessionReport.coding.timeComplexity !== 'Not analyzed' ? (
+                            <p className="text-2xl font-mono text-primary">{sessionReport.coding.timeComplexity}</p>
+                          ) : (
+                            <div className="text-sm text-muted-foreground">
+                              <p className="mb-2">Analysis in progress...</p>
+                              <p className="text-xs">Complexity analysis will be available after AI review.</p>
+                            </div>
+                          )}
                         </div>
                         <div className="p-4 border rounded-lg">
-                          <h4 className="font-semibold mb-2">Space Complexity</h4>
-                          <p className="text-2xl font-mono">{sessionReport.coding.spaceComplexity}</p>
+                          <h4 className="font-semibold mb-2 flex items-center gap-2">
+                            <Database className="w-4 h-4" />
+                            Space Complexity
+                          </h4>
+                          {sessionReport.coding.spaceComplexity && sessionReport.coding.spaceComplexity !== 'Not analyzed' ? (
+                            <p className="text-2xl font-mono text-primary">{sessionReport.coding.spaceComplexity}</p>
+                          ) : (
+                            <div className="text-sm text-muted-foreground">
+                              <p className="mb-2">Analysis in progress...</p>
+                              <p className="text-xs">Complexity analysis will be available after AI review.</p>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -1381,10 +1434,22 @@ const FeedbackDetail = () => {
                           <div className="p-4 bg-slate-900 text-slate-100 rounded-lg overflow-x-auto">
                             <pre className="text-sm font-mono">
                               <code>{typeof sessionReport.coding.solution === 'string' 
-                                ? (sessionReport.coding.solution.substring(0, 500) + (sessionReport.coding.solution.length > 500 ? '\n...(truncated)' : ''))
-                                : JSON.stringify(sessionReport.coding.solution, null, 2)}</code>
+                                ? sessionReport.coding.solution
+                                : (sessionReport.coding.solution.code || JSON.stringify(sessionReport.coding.solution, null, 2))}</code>
                             </pre>
                           </div>
+                          {sessionReport.coding.solution.language && (
+                            <div className="mt-2 flex items-center gap-2">
+                              <Badge variant="outline">
+                                {sessionReport.coding.solution.language}
+                              </Badge>
+                              {sessionReport.coding.solution.timeTaken && (
+                                <span className="text-xs text-muted-foreground">
+                                  Time taken: {Math.floor(sessionReport.coding.solution.timeTaken / 60)}m {sessionReport.coding.solution.timeTaken % 60}s
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -1430,21 +1495,78 @@ const FeedbackDetail = () => {
 
                 {/* Combined Error Analysis */}
                 {sessionReport.errorAnalysis && (
+                  (sessionReport.errorAnalysis.mcqErrors?.incorrectAnswers?.length > 0 || 
+                   sessionReport.errorAnalysis.codingErrors?.failedTestCases?.length > 0) && (
                   <Card className="shadow-soft">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <AlertCircle className="w-5 h-5 text-orange-600" />
                         Error Analysis (Combined from Both Rounds)
                       </CardTitle>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Comprehensive analysis of errors from MCQ and Coding rounds to identify patterns and areas for improvement.
+                      </p>
                     </CardHeader>
                     <CardContent className="space-y-6">
                       {/* MCQ Errors */}
-                      {sessionReport.errorAnalysis.mcqErrors && (
+                      {sessionReport.errorAnalysis.mcqErrors && 
+                       sessionReport.errorAnalysis.mcqErrors.incorrectAnswers && 
+                       sessionReport.errorAnalysis.mcqErrors.incorrectAnswers.length > 0 && (
                         <div>
-                          <h4 className="font-semibold mb-3 flex items-center gap-2">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-semibold flex items-center gap-2">
                             <FileText className="w-4 h-4" />
-                            MCQ Errors
+                              MCQ Errors Analysis
                           </h4>
+                            {sessionReport.errorAnalysis.mcqErrors.incorrectAnswers && (
+                              <Badge variant="destructive">
+                                {sessionReport.errorAnalysis.mcqErrors.incorrectAnswers.length} Incorrect
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          {/* Error Summary Stats */}
+                          {sessionReport.errorAnalysis.mcqErrors.incorrectAnswers && sessionReport.errorAnalysis.mcqErrors.incorrectAnswers.length > 0 && (
+                            <div className="grid md:grid-cols-3 gap-4 mb-4">
+                              <div className="p-3 border border-red-200 rounded-lg bg-red-50/30">
+                                <div className="text-xs text-muted-foreground mb-1">Total Errors</div>
+                                <div className="text-2xl font-bold text-red-600">
+                                  {sessionReport.errorAnalysis.mcqErrors.incorrectAnswers.length}
+                                </div>
+                              </div>
+                              <div className="p-3 border border-yellow-200 rounded-lg bg-yellow-50/30">
+                                <div className="text-xs text-muted-foreground mb-1">Most Common Type</div>
+                                <div className="text-sm font-semibold text-yellow-700">
+                                  {sessionReport.errorAnalysis.mcqErrors.mostCommonErrorType || 'Conceptual'}
+                                </div>
+                              </div>
+                              <div className="p-3 border border-blue-200 rounded-lg bg-blue-50/30">
+                                <div className="text-xs text-muted-foreground mb-1">Weak Areas</div>
+                                <div className="text-sm font-semibold text-blue-700">
+                                  {sessionReport.errorAnalysis.mcqErrors.weakAreas?.length || 0} Topics
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Weak Areas/Topics */}
+                          {sessionReport.errorAnalysis.mcqErrors.weakAreas && sessionReport.errorAnalysis.mcqErrors.weakAreas.length > 0 && (
+                            <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg mb-4">
+                              <h5 className="font-semibold text-sm text-orange-900 mb-2 flex items-center gap-2">
+                                <Target className="w-4 h-4" />
+                                Focus Areas - Topics You Should Review
+                              </h5>
+                              <div className="flex flex-wrap gap-2">
+                                {sessionReport.errorAnalysis.mcqErrors.weakAreas.map((area: string, index: number) => (
+                                  <Badge key={index} variant="outline" className="bg-white">
+                                    {area}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Detailed Error List */}
                           {sessionReport.errorAnalysis.mcqErrors.incorrectAnswers && sessionReport.errorAnalysis.mcqErrors.incorrectAnswers.length > 0 && (
                             <div className="space-y-4">
                               {sessionReport.errorAnalysis.mcqErrors.incorrectAnswers.map((error: any, index: number) => (
@@ -1505,7 +1627,9 @@ const FeedbackDetail = () => {
                       )}
 
                       {/* Coding Errors */}
-                      {sessionReport.errorAnalysis.codingErrors && (
+                      {sessionReport.errorAnalysis.codingErrors && 
+                       sessionReport.errorAnalysis.codingErrors.failedTestCases && 
+                       sessionReport.errorAnalysis.codingErrors.failedTestCases.length > 0 && (
                         <div>
                           <h4 className="font-semibold mb-3 flex items-center gap-2">
                             <Code2 className="w-4 h-4" />
@@ -1642,7 +1766,7 @@ const FeedbackDetail = () => {
                       )}
                     </CardContent>
                   </Card>
-                )}
+                ))}
 
                 {/* Detailed Recommendations */}
                 {sessionReport.detailedRecommendations && (
@@ -1652,8 +1776,93 @@ const FeedbackDetail = () => {
                         <Lightbulb className="w-5 h-5 text-yellow-600" />
                         Detailed Recommendations
                       </CardTitle>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Actionable recommendations based on your performance in both MCQ and Coding rounds.
+                      </p>
                     </CardHeader>
                     <CardContent className="space-y-6">
+                      {/* Priority Focus Areas */}
+                      {(sessionReport.errorAnalysis?.mcqErrors?.weakAreas || sessionReport.errorAnalysis?.codingErrors?.weakAreas) && (
+                        <div className="p-4 bg-gradient-to-r from-orange-50 to-yellow-50 border-l-4 border-l-orange-500 rounded-lg">
+                          <h4 className="font-semibold mb-3 flex items-center gap-2 text-orange-900">
+                            <Target className="w-5 h-5" />
+                            Priority Focus Areas
+                          </h4>
+                          <div className="space-y-2">
+                            {sessionReport.errorAnalysis?.mcqErrors?.weakAreas && sessionReport.errorAnalysis.mcqErrors.weakAreas.length > 0 && (
+                              <div>
+                                <p className="text-sm font-medium mb-2">MCQ Topics to Review:</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {sessionReport.errorAnalysis.mcqErrors.weakAreas.map((area: string, index: number) => (
+                                    <Badge key={index} variant="outline" className="bg-white">
+                                      {area}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {sessionReport.errorAnalysis?.codingErrors?.weakAreas && sessionReport.errorAnalysis.codingErrors.weakAreas.length > 0 && (
+                              <div className="mt-3">
+                                <p className="text-sm font-medium mb-2">Coding Concepts to Practice:</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {sessionReport.errorAnalysis.codingErrors.weakAreas.map((area: string, index: number) => (
+                                    <Badge key={index} variant="outline" className="bg-white">
+                                      {area}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Study Strategy */}
+                      {(sessionReport.errorAnalysis?.mcqErrors?.incorrectAnswers?.length > 0 || 
+                        sessionReport.errorAnalysis?.codingErrors?.failedTestCases?.length > 0) && (
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                          <h4 className="font-semibold mb-3 flex items-center gap-2 text-blue-900">
+                            <Briefcase className="w-5 h-5" />
+                            Recommended Study Strategy
+                          </h4>
+                          <div className="space-y-3">
+                            {sessionReport.errorAnalysis?.mcqErrors?.incorrectAnswers?.length > 0 && (
+                              <div className="flex items-start gap-3">
+                                <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">1</div>
+                                <div>
+                                  <p className="font-medium text-sm">Review MCQ Concepts</p>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Focus on the {sessionReport.errorAnalysis.mcqErrors.incorrectAnswers.length} questions you got wrong. 
+                                    Understand why your answers were incorrect and review the underlying concepts.
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                            {sessionReport.errorAnalysis?.codingErrors?.failedTestCases?.length > 0 && (
+                              <div className="flex items-start gap-3">
+                                <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">2</div>
+                                <div>
+                                  <p className="font-medium text-sm">Practice Similar Coding Problems</p>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Work on problems with similar patterns. Focus on edge cases and test your solutions thoroughly.
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                            <div className="flex items-start gap-3">
+                              <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">3</div>
+                              <div>
+                                <p className="font-medium text-sm">Take Another Mock Interview</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  After studying, test your knowledge with another mock interview to track your improvement.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* How to Improve */}
                       {/* How to Improve */}
                       {sessionReport.detailedRecommendations.howToImprove && sessionReport.detailedRecommendations.howToImprove.length > 0 && (
                         <div>
@@ -1820,23 +2029,15 @@ const FeedbackDetail = () => {
                                 </Badge>
                               </div>
                               <Progress value={Number(finalReport.overallScore || hrData?.overallScore || 0)} className="h-3" />
-                              {(finalReport.overallPerformanceSummary || finalReport.summary) && (
-                                <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-                                  <h4 className="font-semibold mb-2">Comprehensive Performance Summary</h4>
-                                  <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                                    {finalReport.overallPerformanceSummary || finalReport.summary}
+                              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+                                <p className="text-sm text-blue-800 dark:text-blue-200">
+                                  <strong>💡 Tip:</strong> The comprehensive performance summary at the top of this page combines all aspects of your interview. 
+                                  Review it first for an overall understanding, then explore the detailed sections below.
                                   </p>
                                 </div>
-                              )}
                             </div>
                             
                             <div className="space-y-3">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-muted-foreground">Questions Answered:</span>
-                                <span className="font-medium">
-                                  {hrData?.answeredCount || 0} / {hrData?.questionCount || 0}
-                                </span>
-                              </div>
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-muted-foreground">Session Duration:</span>
                                 <span className="font-medium">{formatDuration(sessionReport.duration || 0)}</span>
@@ -1851,6 +2052,90 @@ const FeedbackDetail = () => {
                               )}
                             </div>
                           </div>
+                          
+                          {/* Score Breakdown */}
+                          {finalReport.scoreBreakdown && (
+                            <div className="mt-6 pt-6 border-t">
+                              <h4 className="font-semibold mb-4 flex items-center gap-2">
+                                <BarChart3 className="w-4 h-4" />
+                                Score Breakdown
+                              </h4>
+                              <div className="space-y-4">
+                                {/* Answer Quality */}
+                                {finalReport.scoreBreakdown.answerQuality && (
+                                  <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium">Answer Quality</span>
+                                        <Badge variant="outline" className="text-xs">
+                                          {finalReport.scoreBreakdown.answerQuality.weight}% weight
+                                        </Badge>
+                                      </div>
+                                      <span className="text-sm font-semibold">{finalReport.scoreBreakdown.answerQuality.score}%</span>
+                                    </div>
+                                    <Progress value={finalReport.scoreBreakdown.answerQuality.score} className="h-2 mb-1" />
+                                    <p className="text-xs text-muted-foreground">{finalReport.scoreBreakdown.answerQuality.description}</p>
+                                  </div>
+                                )}
+                                
+                                {/* Communication */}
+                                {finalReport.scoreBreakdown.communication && (
+                                  <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium">Communication Fluency</span>
+                                        <Badge variant="outline" className="text-xs">
+                                          {finalReport.scoreBreakdown.communication.weight}% weight
+                                        </Badge>
+                                      </div>
+                                      <span className="text-sm font-semibold">{finalReport.scoreBreakdown.communication.score}%</span>
+                                    </div>
+                                    <Progress value={finalReport.scoreBreakdown.communication.score} className="h-2 mb-1" />
+                                    <p className="text-xs text-muted-foreground">{finalReport.scoreBreakdown.communication.description}</p>
+                                  </div>
+                                )}
+                                
+                                {/* Non-Verbal */}
+                                {finalReport.scoreBreakdown.nonVerbal && (
+                                  <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium">Non-Verbal Communication</span>
+                                        <Badge variant="outline" className="text-xs">
+                                          {finalReport.scoreBreakdown.nonVerbal.weight}% weight
+                                        </Badge>
+                                      </div>
+                                      <span className="text-sm font-semibold">{finalReport.scoreBreakdown.nonVerbal.score}%</span>
+                                    </div>
+                                    <Progress value={finalReport.scoreBreakdown.nonVerbal.score} className="h-2 mb-1" />
+                                    <p className="text-xs text-muted-foreground">{finalReport.scoreBreakdown.nonVerbal.description}</p>
+                                  </div>
+                                )}
+                                
+                                {/* Professionalism */}
+                                {finalReport.scoreBreakdown.professionalism && (
+                                  <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium">Professionalism & Environment</span>
+                                        <Badge variant="outline" className="text-xs">
+                                          {finalReport.scoreBreakdown.professionalism.weight}% weight
+                                        </Badge>
+                                      </div>
+                                      <span className="text-sm font-semibold">{finalReport.scoreBreakdown.professionalism.score}%</span>
+                                    </div>
+                                    <Progress value={finalReport.scoreBreakdown.professionalism.score} className="h-2 mb-1" />
+                                    <p className="text-xs text-muted-foreground">
+                                      {finalReport.scoreBreakdown.professionalism.description}
+                                      {finalReport.scoreBreakdown.professionalism.violations > 0 && 
+                                        ` (${finalReport.scoreBreakdown.professionalism.violations} violation${finalReport.scoreBreakdown.professionalism.violations > 1 ? 's' : ''})`
+                                      }
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
 
@@ -1926,61 +2211,6 @@ const FeedbackDetail = () => {
                           </CardContent>
                         </Card>
                       )}
-
-                      {/* Strengths & Weaknesses */}
-                      <div className="grid md:grid-cols-2 gap-6">
-                        {finalReport.strengths && finalReport.strengths.length > 0 && (
-                          <Card className="shadow-soft">
-                            <CardHeader>
-                              <CardTitle className="flex items-center gap-2">
-                                <CheckCircle2 className="w-5 h-5 text-green-500" />
-                                Strengths
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <ul className="space-y-3">
-                                {finalReport.strengths.map((strength: any, index: number) => (
-                                  <li key={index} className="text-sm flex items-start gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 flex-shrink-0" />
-                                    <div>
-                                      <p className="font-medium">{typeof strength === 'string' ? strength : strength.strength}</p>
-                                      {typeof strength === 'object' && strength.evidence && (
-                                        <p className="text-xs text-muted-foreground mt-1">{strength.evidence}</p>
-                                      )}
-                                    </div>
-                                  </li>
-                                ))}
-                              </ul>
-                            </CardContent>
-                          </Card>
-                        )}
-
-                        {finalReport.weaknesses && finalReport.weaknesses.length > 0 && (
-                          <Card className="shadow-soft">
-                            <CardHeader>
-                              <CardTitle className="flex items-center gap-2">
-                                <AlertCircle className="w-5 h-5 text-yellow-500" />
-                                Areas for Improvement
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <ul className="space-y-3">
-                                {finalReport.weaknesses.map((weakness: any, index: number) => (
-                                  <li key={index} className="text-sm flex items-start gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 mt-2 flex-shrink-0" />
-                                    <div>
-                                      <p className="font-medium">{typeof weakness === 'string' ? weakness : weakness.weakness}</p>
-                                      {typeof weakness === 'object' && weakness.evidence && (
-                                        <p className="text-xs text-muted-foreground mt-1">{weakness.evidence}</p>
-                                      )}
-                                    </div>
-                                  </li>
-                                ))}
-                              </ul>
-                            </CardContent>
-                          </Card>
-                        )}
-                      </div>
 
                       {/* Comprehensive Answer Quality Analysis */}
                       {finalReport.answerQualityAnalysis && (
@@ -2328,16 +2558,41 @@ const FeedbackDetail = () => {
                                   <span className="font-semibold text-lg block">Hand Movements & Gestures</span>
                                   
                                   {(() => {
+                                    console.log('🔍 Hand Movement Data Structure:', gestureData.handMovements);
+                                    
                                     // Get hand movement data from various possible structures
-                                    const handData = gestureData.handMovements.summary?.breakdown || 
-                                                    gestureData.handMovements.summary || 
-                                                    gestureData.handMovements.gestures ||
-                                                    gestureData.handMovements;
+                                    // Priority order: breakdown > summary > direct object
+                                    let handData = null;
+                                    
+                                    if (gestureData.handMovements.summary && typeof gestureData.handMovements.summary === 'object') {
+                                      // If summary exists, check for breakdown inside it
+                                      if (gestureData.handMovements.summary.breakdown) {
+                                        handData = gestureData.handMovements.summary.breakdown;
+                                      } else if (typeof gestureData.handMovements.summary.totalGestures === 'number') {
+                                        // Summary has totalGestures, so breakdown should be at same level
+                                        const { totalGestures, ...rest } = gestureData.handMovements.summary;
+                                        handData = rest;
+                                      }
+                                    }
+                                    
+                                    // Fallback to direct properties
+                                    if (!handData) {
+                                      handData = gestureData.handMovements;
+                                    }
+                                    
+                                    console.log('🔍 Extracted Hand Data:', handData);
                                     
                                     // Filter out non-numeric values and get actual gesture counts
                                     const gestureCounts = Object.entries(handData || {})
-                                      .filter(([_, count]) => typeof count === 'number' && count > 0)
+                                      .filter(([key, count]) => {
+                                        // Exclude metadata fields
+                                        if (key === 'summary' || key === 'feedback' || key === 'totalGestures') return false;
+                                        // Only include numeric counts > 0
+                                        return typeof count === 'number' && count > 0;
+                                      })
                                       .sort(([_, a]: [string, any], [__, b]: [string, any]) => b - a);
+                                    
+                                    console.log('🔍 Filtered Gesture Counts:', gestureCounts);
                                     
                                     if (gestureCounts.length > 0) {
                                       const totalGestures = gestureCounts.reduce((sum, [_, count]: [string, any]) => sum + count, 0);
@@ -2384,16 +2639,41 @@ const FeedbackDetail = () => {
                                   <span className="font-semibold text-lg block">Head Posture & Movement</span>
                                   
                                   {(() => {
+                                    console.log('🔍 Head Pose Data Structure:', gestureData.headPose);
+                                    
                                     // Get head pose data from various possible structures
-                                    const poseData = gestureData.headPose.summary?.breakdown || 
-                                                    gestureData.headPose.summary || 
-                                                    gestureData.headPose.counts ||
-                                                    gestureData.headPose;
+                                    // Priority order: breakdown > summary > direct object
+                                    let poseData = null;
+                                    
+                                    if (gestureData.headPose.summary && typeof gestureData.headPose.summary === 'object') {
+                                      // If summary exists, check for breakdown inside it
+                                      if (gestureData.headPose.summary.breakdown) {
+                                        poseData = gestureData.headPose.summary.breakdown;
+                                      } else if (typeof gestureData.headPose.summary.totalChanges === 'number') {
+                                        // Summary has totalChanges, so breakdown should be at same level
+                                        const { totalChanges, ...rest } = gestureData.headPose.summary;
+                                        poseData = rest;
+                                      }
+                                    }
+                                    
+                                    // Fallback to direct properties
+                                    if (!poseData) {
+                                      poseData = gestureData.headPose;
+                                    }
+                                    
+                                    console.log('🔍 Extracted Pose Data:', poseData);
                                     
                                     // Filter out non-numeric values and get actual pose counts
                                     const poseCounts = Object.entries(poseData || {})
-                                      .filter(([_, count]) => typeof count === 'number' && count > 0)
+                                      .filter(([key, count]) => {
+                                        // Exclude metadata fields
+                                        if (key === 'summary' || key === 'feedback' || key === 'totalChanges') return false;
+                                        // Only include numeric counts > 0
+                                        return typeof count === 'number' && count > 0;
+                                      })
                                       .sort(([_, a]: [string, any], [__, b]: [string, any]) => b - a);
+                                    
+                                    console.log('🔍 Filtered Pose Counts:', poseCounts);
                                     
                                     if (poseCounts.length > 0) {
                                       const totalPoses = poseCounts.reduce((sum, [_, count]: [string, any]) => sum + count, 0);
@@ -2419,7 +2699,7 @@ const FeedbackDetail = () => {
                                       return (
                                         <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-900">
                                           <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                                            No significant head movements detected. This may indicate a very stable head position during the interview.
+                                            Head posture could be improved. Avoid looking away from the camera frequently.
                                           </p>
                                         </div>
                                       );

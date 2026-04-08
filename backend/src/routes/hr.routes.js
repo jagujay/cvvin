@@ -308,10 +308,22 @@ router.post('/transcribe-audio',
         success: true,
         transcription: {
           text: transcription.text || '',
+          text_clean: transcription.text_clean || transcription.text || '',  // Text without filler words
           language: transcription.language || 'en',
           segments: transcription.segments || [],
-          words: transcription.words || [],
-          duration: transcription.duration || 0
+          words: transcription.words || [],  // Now includes is_filler flag
+          pauses: transcription.pauses || [],  // Detected pauses
+          duration: transcription.duration || 0,
+          fluency_metrics: transcription.fluency_metrics || {
+            total_words: 0,
+            filler_count: 0,
+            filler_percentage: 0,
+            pause_count: 0,
+            avg_pause_duration_ms: 0,
+            total_pause_time_ms: 0,
+            words_per_minute: 0,
+            speaking_time_seconds: 0
+          }  // Fluency analysis with proper defaults
         }
       });
     } catch (error) {

@@ -1,23 +1,30 @@
 #!/usr/bin/env python3
 """
 Transcription Wrapper Script
-This script handles faster-whisper import and provides better error messages
+This script uses the WhisperTranscriber class with full filler word and pause detection
 """
 
 import sys
 import json
-import os
 import warnings
 from pathlib import Path
 
 # Suppress all warnings - they go to stderr and interfere with JSON parsing
 warnings.filterwarnings('ignore')
 
+# Import the WhisperTranscriber class from the same directory
+try:
+    from whisper_transcriber import WhisperTranscriber
+except ImportError:
+    # If import fails, try to add current directory to path
+    import os
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from whisper_transcriber import WhisperTranscriber
+
 def main():
     # Check for faster-whisper first
     try:
         import faster_whisper
-        from faster_whisper import WhisperModel
     except ImportError as e:
         error_info = {
             "error": "faster-whisper not installed",
@@ -59,52 +66,9 @@ def main():
         sys.exit(1)
     
     try:
-        # Initialize model
-        model = WhisperModel(
-            model_size,
-            device="cpu",
-            compute_type="int8"
-        )
-        
-        # Transcribe
-        segments, info = model.transcribe(
-            audio_path,
-            language=language,
-            word_timestamps=True,
-            beam_size=5
-        )
-        
-        # Collect results
-        text_segments = []
-        full_text = []
-        words = []
-        
-        for segment in segments:
-            segment_text = segment.text.strip()
-            text_segments.append({
-                "start": segment.start,
-                "end": segment.end,
-                "text": segment_text
-            })
-            full_text.append(segment_text)
-            
-            if hasattr(segment, 'words'):
-                for word in segment.words:
-                    words.append({
-                        "word": word.word,
-                        "start": word.start,
-                        "end": word.end,
-                        "probability": word.probability
-                    })
-        
-        result = {
-            "text": " ".join(full_text),
-            "language": info.language,
-            "language_probability": info.language_probability,
-            "segments": text_segments,
-            "words": words,
-            "duration": info.duration
-        }
+        # Use WhisperTranscriber class which includes filler word and pause detection
+        transcriber = WhisperTranscriber(model_size=model_size, device="cpu", compute_type="int8")
+        result = transcriber.transcribe(audio_path, language=language, word_timestamps=True)
         
         # Output JSON to stdout only (warnings already suppressed)
         print(json.dumps(result), file=sys.stdout)

@@ -397,7 +397,7 @@ class ConsolidatedAPI {
     
     // Create AbortController for timeout handling
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 150000); // 150 seconds (2.5 minutes) - slightly longer than backend timeout
+    const timeoutId = setTimeout(() => controller.abort(), 200000); // 200 seconds (3.3 minutes) - slightly longer than backend timeout
     
     try {
     const response = await fetch(`${BACKEND_BASE_URL}/api/analysis/resume`, {

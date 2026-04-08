@@ -9,7 +9,6 @@ import {
   Code2, 
   MessageSquare, 
   BarChart3, 
-  Play,
   TrendingUp,
   Clock,
   Target,
@@ -21,7 +20,6 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { consolidatedAPI } from "@/services/consolidatedAPI";
 import Layout from "@/components/layout/Layout";
-import sessionsData from "@/mock/sessions.json";
 import Walkthrough from "@/components/ui/walkthrough";
 import { useWalkthrough, WalkthroughStep } from "@/hooks/use-walkthrough";
 import { useToast } from "@/hooks/use-toast";
@@ -42,9 +40,9 @@ const Dashboard = () => {
     totalTime: 0
   });
   const [statsLoading, setStatsLoading] = useState(true);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
   
-  // For now, we'll use mock data. In a real implementation, this would come from Firestore
-  const sessions = sessionsData.recentSessions;
   const hasActivity = sessions.length > 0;
   
   // Load profile completion status
@@ -74,16 +72,18 @@ const Dashboard = () => {
     loadProfileStatus();
   }, [currentUser]);
 
-  // Load feedback statistics
+  // Load feedback statistics and sessions
   useEffect(() => {
-    const loadStatistics = async () => {
+    const loadStatisticsAndSessions = async () => {
       if (!currentUser) {
         setStatsLoading(false);
+        setSessionsLoading(false);
         return;
       }
 
       try {
         setStatsLoading(true);
+        setSessionsLoading(true);
         const result = await consolidatedAPI.getAllSessions(currentUser);
         
         // Handle both direct response and wrapped response
@@ -94,18 +94,22 @@ const Dashboard = () => {
           totalTime: 0
         };
         
+        const sessionsData = result.sessions || result.data?.sessions || [];
+        
         if (result.success !== false) {
           setStatistics(statsData);
+          setSessions(sessionsData);
         }
       } catch (error) {
-        console.error('Failed to load statistics:', error);
+        console.error('Failed to load statistics and sessions:', error);
         // Keep default values on error
       } finally {
         setStatsLoading(false);
+        setSessionsLoading(false);
       }
     };
 
-    loadStatistics();
+    loadStatisticsAndSessions();
   }, [currentUser]);
   
   // User data with real profile completion status
@@ -128,13 +132,6 @@ const Dashboard = () => {
       description: 'Start with any practice session - Resume Analysis, Technical Questions, or HR Interview practice.',
       target: '[data-walkthrough="quick-actions"]',
       position: 'bottom'
-    },
-    {
-      id: 'full-mock',
-      title: 'Full Mock Interview',
-      description: 'Ready for the complete experience? Take a full mock interview that covers everything from resume analysis to detailed feedback.',
-      target: '[data-walkthrough="full-mock-cta"]',
-      position: 'top'
     },
     {
       id: 'welcome-section',
@@ -335,46 +332,8 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          {/* End-to-End Mock Interview CTA (always visible, but disabled if no resume+JD) */}
-          <Card className="mb-8 shadow-soft gradient-accent" data-walkthrough="full-mock-cta">
-            <CardContent className="p-8">
-              <div className="flex flex-col lg:flex-row items-center justify-between">
-                <div className="text-center lg:text-left mb-6 lg:mb-0">
-                  <h2 className="text-2xl font-bold mb-2 text-accent-foreground">
-                    Ready for the Full Experience?
-                  </h2>
-                  <p className="text-accent-foreground/80 mb-4">
-                    Take our comprehensive mock interview: Resume Analysis + Technical + HR + Detailed Feedback
-                  </p>
-                  <div className="flex items-center gap-4 justify-center lg:justify-start">
-                    <Badge variant="secondary" className="text-xs">
-                      45-60 minutes
-                    </Badge>
-                    <Badge variant="secondary" className="text-xs">
-                      Comprehensive Report
-                    </Badge>
-                  </div>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <Button asChild size="lg" className="gradient-primary shadow-medium">
-                    <Link 
-                      to="/interview/full-mock" 
-                      className="flex items-center gap-2"
-                    >
-                      <Play className="w-5 h-5" />
-                      Start Full Mock Interview
-                    </Link>
-                  </Button>
-                  <p className="text-xs text-accent-foreground/60 text-center">
-                    Includes resume analysis as first step
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Recent Activity */}
-          {hasActivity && (
+          {(hasActivity || sessionsLoading) && (
             <Card className="shadow-soft">
               <CardHeader>
                 <div className="flex justify-between items-center">
@@ -385,8 +344,33 @@ const Dashboard = () => {
                 </div>
               </CardHeader>
               <CardContent>
+                {sessionsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    <p className="ml-3 text-muted-foreground">Loading recent activity...</p>
+                  </div>
+                ) : (
                 <div className="space-y-4">
-                  {sessions.slice(0, 3).map((session) => (
+                    {(() => {
+                      // Get only the last (most recent) occurrence of each unique module type
+                      const uniqueSessions: typeof sessions = [];
+                      const seenTypes = new Set<string>();
+                      
+                      for (const session of sessions) {
+                        // Skip Full Mock Interview
+                        if (session.type === "Full Mock Interview") continue;
+                        
+                        // Only add if we haven't seen this type before
+                        if (!seenTypes.has(session.type)) {
+                          uniqueSessions.push(session);
+                          seenTypes.add(session.type);
+                        }
+                        
+                        // Stop after collecting 3 unique sessions
+                        if (uniqueSessions.length >= 3) break;
+                      }
+                      
+                      return uniqueSessions.map((session) => (
                     <div key={session.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -398,9 +382,6 @@ const Dashboard = () => {
                           )}
                           {session.type === "HR Interview" && (
                             <MessageSquare className="w-5 h-5 text-primary" />
-                          )}
-                          {session.type === "Full Mock Interview" && (
-                            <BarChart3 className="w-5 h-5 text-primary" />
                           )}
                         </div>
                         <div>
@@ -419,8 +400,10 @@ const Dashboard = () => {
                         </Button>
                       </div>
                     </div>
-                  ))}
+                      ));
+                    })()}
                 </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -477,23 +460,6 @@ const Dashboard = () => {
                     </Link>
                   </Card>
                 </div>
-
-                {/* CTA for Full Mock */}
-                <Card className="p-8 gradient-accent">
-                  <div className="text-center">
-                    <h3 className="text-xl font-semibold mb-3 text-accent-foreground">
-                      Ready for the Complete Experience?
-                    </h3>
-                    <p className="text-accent-foreground/80 mb-6">
-                      Take a full mock interview with resume analysis, technical round, HR round, and detailed feedback
-                    </p>
-                    <Button asChild size="lg" className="bg-white text-accent hover:bg-white/90 font-semibold">
-                      <Link to="/interview/full-mock">
-                        Start Full Mock Interview
-                      </Link>
-                    </Button>
-                  </div>
-                </Card>
               </div>
             </div>
           )}

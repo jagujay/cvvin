@@ -30,6 +30,8 @@ const ResumeAnalysis = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const [jobDescription, setJobDescription] = useState("");
+  const [jdFile, setJdFile] = useState<File | null>(null);
+  const [isExtractingJd, setIsExtractingJd] = useState(false);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -174,6 +176,91 @@ Salary: $120,000 - $160,000`);
     }
   };
 
+  const handleJdFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!currentUser) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Required",
+        description: "Please log in to upload files."
+      });
+      e.target.value = '';
+      return;
+    }
+
+    // Support TXT and PDF files
+    const validExtensions = ['.txt', '.pdf'];
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+    
+    if (!validExtensions.includes(fileExtension)) {
+      toast({
+        variant: "destructive",
+        title: "Invalid File Type",
+        description: "Please upload a TXT or PDF file, or paste the text directly."
+      });
+      e.target.value = '';
+      return;
+    }
+
+    setIsExtractingJd(true);
+    setJdFile(file);
+
+    try {
+      let extractedText = '';
+
+      // For TXT files, read directly in browser
+      if (fileExtension === '.txt') {
+        extractedText = await file.text();
+      } else if (fileExtension === '.pdf') {
+        // For PDF files, upload to backend and extract text
+        const uploadResult = await consolidatedAPI.uploadFile(currentUser, file);
+        
+        // Call backend to extract text
+        const token = await currentUser.getIdToken();
+        const response = await fetch('http://localhost:3000/api/files/extract-text', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ fileId: uploadResult.fileId }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Failed to extract text from PDF');
+        }
+
+        const result = await response.json();
+        extractedText = result.text || '';
+      }
+
+      if (extractedText.trim()) {
+        setJobDescription(extractedText);
+        toast({
+          title: "Job Description Loaded",
+          description: `Text extracted from "${file.name}"`
+        });
+      } else {
+        throw new Error('No text could be extracted from the file');
+      }
+    } catch (error: any) {
+      console.error('JD file processing failed:', error);
+      toast({
+        variant: "destructive",
+        title: "File Processing Failed",
+        description: error.message || "Failed to process file. Please try pasting the text instead."
+      });
+      setJdFile(null);
+    } finally {
+      setIsExtractingJd(false);
+      // Reset file input
+      e.target.value = '';
+    }
+  };
+
   const handleAnalyze = async () => {
     if (!currentUser) {
       toast({
@@ -189,7 +276,7 @@ Salary: $120,000 - $160,000`);
       toast({
         variant: "destructive",
         title: "Job Description Required",
-        description: "Please paste the job description to analyze your resume."
+        description: "Please paste the job description or upload a file to analyze your resume."
       });
       return;
     }
@@ -364,8 +451,66 @@ Salary: $120,000 - $160,000`);
                 {/* Job Description */}
                 <div>
                   <h3 className="font-semibold mb-3">Job Description</h3>
+                  
+                  {/* File Upload Option */}
+                  <div className="mb-3">
+                    {jdFile ? (
+                      <div className="flex items-center gap-4 p-3 border rounded-lg bg-muted/50">
+                        <FileText className="w-6 h-6 text-primary" />
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{jdFile.name}</p>
+                          {isExtractingJd && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <span className="text-xs text-muted-foreground">Extracting text...</span>
+                            </div>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setJdFile(null);
+                            setJobDescription('');
+                          }}
+                          disabled={isExtractingJd}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed border-border rounded-lg p-4 text-center mb-3">
+                        <input
+                          type="file"
+                          accept=".txt,.pdf"
+                          onChange={handleJdFileUpload}
+                          className="hidden"
+                          id="jd-upload"
+                          disabled={isExtractingJd}
+                        />
+                        <label htmlFor="jd-upload" className={`cursor-pointer ${isExtractingJd ? 'opacity-50' : ''}`}>
+                          <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                          <p className="text-sm font-medium">
+                            {isExtractingJd ? 'Processing...' : 'Upload JD File'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            TXT or PDF (Max 5MB)
+                          </p>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Divider */}
+                  <div className="flex items-center gap-2 my-3">
+                    <div className="flex-1 border-t"></div>
+                    <span className="text-xs text-muted-foreground">OR</span>
+                    <div className="flex-1 border-t"></div>
+                  </div>
+
+                  {/* Text Input */}
                   <Textarea
-                    placeholder="Paste the complete job description here..."
+                    placeholder="Paste your text / JD here..."
                     value={jobDescription}
                     onChange={(e) => setJobDescription(e.target.value)}
                     className="min-h-[200px] resize-none"

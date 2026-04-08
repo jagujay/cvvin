@@ -37,12 +37,43 @@ interface Question {
   rubric: Record<string, { weight: number; description: string }>;
 }
 
+interface Word {
+  word: string;
+  start: number;
+  end: number;
+  probability: number;
+  is_filler?: boolean;
+}
+
+interface Pause {
+  type: 'pause';
+  start: number;
+  end: number;
+  duration_ms: number;
+  after_word: string;
+  before_word: string;
+}
+
+interface FluencyMetrics {
+  total_words: number;
+  filler_count: number;
+  filler_percentage: number;
+  pause_count: number;
+  avg_pause_duration_ms: number;
+  total_pause_time_ms: number;
+  words_per_minute: number;
+  speaking_time_seconds: number;
+}
+
 interface Transcription {
   text: string;
+  text_clean?: string;  // Text without filler words
   language: string;
   segments: any[];
-  words: any[];
+  words: Word[];
+  pauses?: Pause[];
   duration: number;
+  fluency_metrics?: FluencyMetrics;
 }
 
 // Helper function to get fallback questions with intro first
@@ -150,6 +181,7 @@ const HRSession = () => {
   const [transcribing, setTranscribing] = useState<Record<string, boolean>>({});
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [proctoringSetupComplete, setProctoringSetupComplete] = useState(false);
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null); // Track actual session start time
   const [isFullscreenExitBlocking, setIsFullscreenExitBlocking] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -554,6 +586,8 @@ const HRSession = () => {
   const startSession = () => {
     if (questions.length === 0) return;
     
+    // Record the actual start time
+    setSessionStartTime(Date.now());
     setSessionStarted(true);
     // Set time to 60 seconds (1 minute) recording time
     setTimeRemaining(60);
@@ -756,8 +790,10 @@ const HRSession = () => {
         transcriptionLength: qa.transcription.length
       })));
 
-      // Calculate total duration (approximate)
-      const totalDuration = questions.reduce((acc, q) => acc + (q.timeLimit || 90), 0);
+      // Calculate total duration (actual elapsed time in seconds)
+      const totalDuration = sessionStartTime 
+        ? Math.floor((Date.now() - sessionStartTime) / 1000) 
+        : questions.reduce((acc, q) => acc + (q.timeLimit || 90), 0); // Fallback to estimated duration
 
       // Collect gesture analysis data
       let gestureData: GestureData | null = null;
@@ -1153,14 +1189,91 @@ const HRSession = () => {
               {/* Show transcription result if already recorded */}
               {hasRecorded && responses[currentQuestion.id] && (
                 <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
-                  <p className="text-sm font-semibold text-green-700 dark:text-green-300 mb-2">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-semibold text-green-700 dark:text-green-300">
                     ✓ Response Recorded
                   </p>
-                  <p className="text-sm text-green-600 dark:text-green-400">
-                    {typeof responses[currentQuestion.id] === 'string' 
-                      ? responses[currentQuestion.id]
-                      : responses[currentQuestion.id]?.text || 'Transcription available'}
-                  </p>
+                    {typeof responses[currentQuestion.id] !== 'string' && responses[currentQuestion.id]?.fluency_metrics && (
+                      <div className="flex gap-3 text-xs">
+                        <span className="text-green-600 dark:text-green-400">
+                          {(responses[currentQuestion.id].fluency_metrics.words_per_minute ?? 0).toFixed(0)} WPM
+                        </span>
+                        {(responses[currentQuestion.id].fluency_metrics.filler_count ?? 0) > 0 && (
+                          <span className="text-orange-600 dark:text-orange-400">
+                            {responses[currentQuestion.id].fluency_metrics.filler_count} fillers
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-sm text-green-600 dark:text-green-400 space-y-2">
+                    {typeof responses[currentQuestion.id] === 'string' ? (
+                      <p>{responses[currentQuestion.id]}</p>
+                    ) : (
+                      <>
+                        {/* Render words with filler highlighting */}
+                        <div className="leading-relaxed">
+                          {responses[currentQuestion.id]?.words?.map((word: Word, idx: number) => (
+                            <span key={idx}>
+                              <span 
+                                className={word.is_filler 
+                                  ? "text-orange-500 dark:text-orange-400 italic font-medium" 
+                                  : "text-green-600 dark:text-green-400"
+                                }
+                                title={word.is_filler ? "Filler word" : ""}
+                              >
+                                {word.word}
+                              </span>
+                              {' '}
+                            </span>
+                          )) || <p>{responses[currentQuestion.id]?.text || 'Transcription available'}</p>}
+                        </div>
+                        
+                        {/* Show fluency metrics if available */}
+                        {responses[currentQuestion.id]?.fluency_metrics && (
+                          <div className="mt-3 pt-3 border-t border-green-200 dark:border-green-800">
+                            <p className="text-xs text-green-700 dark:text-green-300 font-semibold mb-2">
+                              Fluency Analysis:
+                            </p>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div>
+                                <span className="text-green-700 dark:text-green-300">Words: </span>
+                                <span className="font-medium">{responses[currentQuestion.id].fluency_metrics.total_words ?? 0}</span>
+                              </div>
+                              <div>
+                                <span className="text-green-700 dark:text-green-300">Speaking Rate: </span>
+                                <span className="font-medium">{(responses[currentQuestion.id].fluency_metrics.words_per_minute ?? 0).toFixed(0)} WPM</span>
+                              </div>
+                              {(responses[currentQuestion.id].fluency_metrics.filler_count ?? 0) > 0 && (
+                                <>
+                                  <div>
+                                    <span className="text-orange-600 dark:text-orange-400">Fillers: </span>
+                                    <span className="font-medium">{responses[currentQuestion.id].fluency_metrics.filler_count}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-orange-600 dark:text-orange-400">Filler %: </span>
+                                    <span className="font-medium">{(responses[currentQuestion.id].fluency_metrics.filler_percentage ?? 0).toFixed(1)}%</span>
+                                  </div>
+                                </>
+                              )}
+                              {(responses[currentQuestion.id].fluency_metrics.pause_count ?? 0) > 0 && (
+                                <>
+                                  <div>
+                                    <span className="text-blue-600 dark:text-blue-400">Pauses: </span>
+                                    <span className="font-medium">{responses[currentQuestion.id].fluency_metrics.pause_count}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-blue-600 dark:text-blue-400">Avg Pause: </span>
+                                    <span className="font-medium">{((responses[currentQuestion.id].fluency_metrics.avg_pause_duration_ms ?? 0) / 1000).toFixed(1)}s</span>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
 

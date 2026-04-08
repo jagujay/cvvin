@@ -11,8 +11,8 @@ class AnalysisService {
   constructor() {
     // Path to Python script
     this.pythonScriptPath = path.join(__dirname, 'resume-analyzer', 'resume_analyzer.py');
-    // Timeout for analysis (120 seconds - increased for better reliability)
-    this.analysisTimeout = 120000;
+    // Timeout for analysis (180 seconds / 3 minutes - Ollama can be slow)
+    this.analysisTimeout = 180000;
   }
 
   /**
@@ -310,6 +310,59 @@ if __name__ == "__main__":
   }
 
   /**
+   * Generate mock analysis result (for development/testing)
+   * @param {string} jobDescription - Job description text
+   * @returns {Object} Mock analysis result
+   */
+  generateMockAnalysis(jobDescription) {
+    return {
+      overallScore: 78,
+      matchPercentage: 78,
+      processingTime: 2.5,
+      summary: "Strong match with relevant experience and skills. Some areas for improvement identified.",
+      analysisDate: new Date().toISOString(),
+      jobDescription: {
+        title: "Software Engineer",
+        company: "Tech Company",
+        location: "Remote",
+        extractedSkills: ["JavaScript", "React", "Node.js", "Python", "SQL"],
+        experienceRequired: "3-5 years",
+        educationRequired: "Bachelor's in Computer Science or related field"
+      },
+      matchedSkills: [
+        { skill: "JavaScript", resumeMatch: true, jdMatch: true, proficiency: "Advanced", yearsExperience: 4, strength: "high", evidence: "4 years of professional experience" },
+        { skill: "React", resumeMatch: true, jdMatch: true, proficiency: "Advanced", yearsExperience: 3, strength: "high", evidence: "Built multiple production applications" },
+        { skill: "Node.js", resumeMatch: true, jdMatch: true, proficiency: "Intermediate", yearsExperience: 2, strength: "medium", evidence: "Backend development experience" }
+      ],
+      missingSkills: [
+        { skill: "Python", importance: "medium", recommendation: "Consider taking an online Python course to strengthen backend skills" },
+        { skill: "Docker", importance: "medium", recommendation: "Learn containerization basics through Docker tutorials" }
+      ],
+      extraSkills: [
+        { skill: "TypeScript", value: "Adds type safety to JavaScript projects", relevance: "high" },
+        { skill: "Git", value: "Essential for version control", relevance: "high" }
+      ],
+      strengths: [
+        { category: "Technical Skills", description: "Strong frontend development experience with modern frameworks", impact: "high" },
+        { category: "Experience", description: "Relevant work experience in similar roles", impact: "high" }
+      ],
+      improvements: [
+        { category: "Skills Enhancement", description: "Learn Python for backend development", priority: "medium", timeEstimate: "2-4 weeks", difficulty: "beginner" },
+        { category: "Skills Enhancement", description: "Get familiar with containerization using Docker", priority: "medium", timeEstimate: "1-2 weeks", difficulty: "beginner" }
+      ],
+      recommendations: [
+        { type: "skill_development", title: "Backend Skills", description: "Expand your backend knowledge by learning Python", priority: "medium", timeEstimate: "2-4 weeks", difficulty: "beginner" },
+        { type: "skill_development", title: "DevOps Basics", description: "Learn Docker and containerization fundamentals", priority: "medium", timeEstimate: "1-2 weeks", difficulty: "beginner" }
+      ],
+      atsCompatibility: {
+        score: 82,
+        issues: ["Consider adding more keywords from the job description", "Format could be more ATS-friendly"],
+        improvements: ["Add a skills section with bullet points", "Use standard section headings", "Include relevant keywords naturally"]
+      }
+    };
+  }
+
+  /**
    * Analyze resume against job description
    * @param {string} pdfPath - Path to PDF file
    * @param {string} jobDescription - Job description text
@@ -319,6 +372,13 @@ if __name__ == "__main__":
     const startTime = Date.now();
     
     try {
+      // Check for mock mode (for development/testing when Ollama is slow)
+      if (process.env.USE_MOCK_RESUME_ANALYSIS === 'true') {
+        Logger.info('Using mock resume analysis (development mode)');
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate processing
+        return this.generateMockAnalysis(jobDescription);
+      }
+
       // Check if Python script exists
       const scriptExists = await this.checkPythonScript();
       if (!scriptExists) {

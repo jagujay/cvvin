@@ -450,7 +450,7 @@ class UserProfileService {
    */
   async getUserResumeData(userId) {
     try {
-      const query = `
+      const sqlQuery = `
         SELECT 
           up.resume_url,
           up.resume_text,
@@ -463,7 +463,7 @@ class UserProfileService {
         WHERE up.user_id = $1 AND up.resume_url IS NOT NULL
       `;
       
-      const result = await query(query, [userId]);
+      const result = await query(sqlQuery, [userId]);
       
       if (result.rows.length === 0) {
         return null;

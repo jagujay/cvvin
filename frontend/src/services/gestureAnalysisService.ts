@@ -4,6 +4,8 @@
 interface GestureData {
   eyeContact: {
     percentage: number;
+    breakCount?: number;          // Number of times eye contact was broken
+    longestBreakSeconds?: number; // Longest break duration in seconds
   };
   expressions: {
     [key: string]: number; // milliseconds each expression occurred
@@ -32,7 +34,11 @@ class GestureAnalysisService {
     totalSamples: 0,
     lookingAtCamera: 0,
     lookingAway: 0,
-    percentage: 0
+    percentage: 0,
+    consecutiveAwayFrames: 0,  // Track consecutive frames looking away
+    breakCount: 0,              // Number of times eye contact was broken
+    lastWasLooking: true,       // Track previous state to detect breaks
+    longestBreakFrames: 0       // Longest continuous break
   };
 
   private expressionData = {
@@ -300,27 +306,67 @@ class GestureAnalysisService {
       const leftEyeRight = landmarks[133];
       const rightEyeLeft = landmarks[362];
       const rightEyeRight = landmarks[263];
+      
+      // Eye top/bottom landmarks for vertical checking
+      const leftEyeTop = landmarks[159];
+      const leftEyeBottom = landmarks[145];
+      const rightEyeTop = landmarks[386];
+      const rightEyeBottom = landmarks[374];
 
       if (!leftIrisCenter || !rightIrisCenter) return;
 
-      // Calculate iris position relative to eye corners
-      const leftIrisRatio = (leftIrisCenter.x - leftEyeLeft.x) / (leftEyeRight.x - leftEyeLeft.x);
-      const rightIrisRatio = (rightIrisCenter.x - rightEyeLeft.x) / (rightEyeRight.x - rightEyeLeft.x);
-      const avgIrisRatio = (leftIrisRatio + rightIrisRatio) / 2;
+      // Calculate iris position relative to eye corners (HORIZONTAL)
+      const leftIrisRatioX = (leftIrisCenter.x - leftEyeLeft.x) / (leftEyeRight.x - leftEyeLeft.x);
+      const rightIrisRatioX = (rightIrisCenter.x - rightEyeLeft.x) / (rightEyeRight.x - rightEyeLeft.x);
+      const avgIrisRatioX = (leftIrisRatioX + rightIrisRatioX) / 2;
 
-      // Determine if looking at camera (iris centered)
-      const lookingAtCamera = avgIrisRatio > 0.35 && avgIrisRatio < 0.65;
+      // Calculate iris position relative to eye height (VERTICAL)
+      const leftIrisRatioY = (leftIrisCenter.y - leftEyeTop.y) / (leftEyeBottom.y - leftEyeTop.y);
+      const rightIrisRatioY = (rightIrisCenter.y - rightEyeTop.y) / (rightEyeBottom.y - rightEyeTop.y);
+      const avgIrisRatioY = (leftIrisRatioY + rightIrisRatioY) / 2;
+
+      // LENIENT THRESHOLDS for more realistic eye contact detection:
+      // Horizontal: Wide range (0.30-0.70) - 40% tolerance for natural eye movement
+      // Vertical: Wide range (0.30-0.70) - allows for natural up/down gaze
+      const horizontalCentered = avgIrisRatioX > 0.30 && avgIrisRatioX < 0.70;
+      const verticalCentered = avgIrisRatioY > 0.30 && avgIrisRatioY < 0.70;
+      
+      // BOTH horizontal AND vertical must be in acceptable range
+      const lookingAtCamera = horizontalCentered && verticalCentered;
 
       this.eyeContactData.totalSamples++;
+      
+      // Track breaks and consecutive away frames
       if (lookingAtCamera) {
         this.eyeContactData.lookingAtCamera++;
+        
+        // If was looking away before, this is end of a break
+        if (!this.eyeContactData.lastWasLooking) {
+          // Update longest break if this was longer
+          if (this.eyeContactData.consecutiveAwayFrames > this.eyeContactData.longestBreakFrames) {
+            this.eyeContactData.longestBreakFrames = this.eyeContactData.consecutiveAwayFrames;
+          }
+          this.eyeContactData.consecutiveAwayFrames = 0;
+        }
+        
+        this.eyeContactData.lastWasLooking = true;
       } else {
         this.eyeContactData.lookingAway++;
+        this.eyeContactData.consecutiveAwayFrames++;
+        
+        // If was looking at camera before, this is a new break
+        if (this.eyeContactData.lastWasLooking) {
+          this.eyeContactData.breakCount++;
+        }
+        
+        this.eyeContactData.lastWasLooking = false;
       }
 
-      // Calculate percentage
-      this.eyeContactData.percentage =
-        (this.eyeContactData.lookingAtCamera / this.eyeContactData.totalSamples) * 100;
+      // Calculate percentage - NO PENALTIES, just raw percentage
+      // This is more lenient and realistic for interview scenarios
+      const percentage = (this.eyeContactData.lookingAtCamera / this.eyeContactData.totalSamples) * 100;
+      
+      this.eyeContactData.percentage = percentage;
     } catch (error) {
       console.warn('Eye contact analysis error:', error);
     }
@@ -333,32 +379,72 @@ class GestureAnalysisService {
       const mouthBottom = landmarks[14];
       const mouthLeft = landmarks[61];
       const mouthRight = landmarks[291];
+      const mouthCornerLeft = landmarks[61];
+      const mouthCornerRight = landmarks[291];
 
       // Eye landmarks
       const leftEyeTop = landmarks[159];
       const leftEyeBottom = landmarks[145];
       const rightEyeTop = landmarks[386];
       const rightEyeBottom = landmarks[374];
+      
+      // Eyebrow landmarks for better expression detection
+      const leftEyebrowInner = landmarks[70];
+      const leftEyebrowOuter = landmarks[46];
+      const rightEyebrowInner = landmarks[300];
+      const rightEyebrowOuter = landmarks[276];
 
       if (!mouthTop || !mouthBottom || !mouthLeft || !mouthRight) return;
 
-      // Calculate mouth aspect ratio
+      // Calculate mouth metrics
       const mouthWidth = Math.abs(mouthRight.x - mouthLeft.x);
       const mouthHeight = Math.abs(mouthBottom.y - mouthTop.y);
       const mouthRatio = mouthWidth / (mouthHeight + 0.0001);
 
-      // Calculate eye aspect ratio
+      // Calculate mouth corner position (for smile detection)
+      const mouthCenterY = (mouthTop.y + mouthBottom.y) / 2;
+      const leftCornerRise = mouthCenterY - mouthCornerLeft.y;
+      const rightCornerRise = mouthCenterY - mouthCornerRight.y;
+      const avgCornerRise = (leftCornerRise + rightCornerRise) / 2;
+
+      // Calculate eye metrics
       const leftEyeHeight = Math.abs(leftEyeTop.y - leftEyeBottom.y);
       const rightEyeHeight = Math.abs(rightEyeTop.y - rightEyeBottom.y);
       const avgEyeHeight = (leftEyeHeight + rightEyeHeight) / 2;
 
-      // Determine expression
+      // Calculate eyebrow position (for surprise/anger detection)
+      const leftEyebrowHeight = leftEyebrowInner && leftEyeTop ? Math.abs(leftEyebrowInner.y - leftEyeTop.y) : 0;
+      const rightEyebrowHeight = rightEyebrowInner && rightEyeTop ? Math.abs(rightEyebrowInner.y - rightEyeTop.y) : 0;
+      const avgEyebrowHeight = (leftEyebrowHeight + rightEyebrowHeight) / 2;
+
+      // SIMPLIFIED AND LENIENT EXPRESSION DETECTION
+      // Most people appear neutral/calm during interviews - this is expected and good!
       let expression = 'neutral';
-      if (mouthRatio > 3.5) {
+      
+      // Happy: Clear smile (LENIENT - easy to detect genuine smiles)
+      if (mouthRatio > 3.0 && avgCornerRise > 0.005) {
         expression = 'happy';
-      } else if (avgEyeHeight < 0.015) {
+      }
+      // Surprised: Very wide eyes and raised eyebrows (rare, needs clear signal)
+      else if (avgEyeHeight > 0.030 && avgEyebrowHeight > 0.045) {
+        expression = 'surprised';
+      }
+      // Sad: Clear frown (needs strong signal to avoid false positives)
+      else if (avgCornerRise < -0.012) {
+        expression = 'sad';
+      }
+      // Angry: Requires VERY clear signals (eyebrows very low, eyes narrow)
+      // Made much stricter to avoid false positives
+      else if (avgEyebrowHeight < 0.020 && avgEyeHeight < 0.015 && mouthRatio < 2.5) {
+        expression = 'angry';
+      }
+      // Fearful: Wide eyes with tension (needs clear signal)
+      else if (avgEyeHeight > 0.028 && mouthHeight > 0.025) {
         expression = 'fearful';
-      } else {
+      }
+      // Neutral: Default - most common and APPROPRIATE for interviews!
+      // This is the expected baseline for professional settings
+      else {
         expression = 'neutral';
       }
 
@@ -568,7 +654,9 @@ class GestureAnalysisService {
 
     return {
       eyeContact: {
-        percentage: this.eyeContactData.percentage
+        percentage: this.eyeContactData.percentage,
+        breakCount: this.eyeContactData.breakCount,
+        longestBreakSeconds: Math.round((this.eyeContactData.longestBreakFrames / 30) * 10) / 10 // Convert frames to seconds (30fps)
       },
       expressions: { ...this.expressionData.counts },
       handMovements: { ...this.handMovementData.gestures },

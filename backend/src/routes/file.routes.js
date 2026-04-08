@@ -5,12 +5,14 @@ const router = express.Router();
 
 // Import services and middleware
 const UserProfileService = require('../services/user.service');
+const AnalysisService = require('../services/analysis.service');
 const authMiddleware = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 const Logger = require('../utils/logger.utils');
 
 // Initialize services
 const userService = new UserProfileService();
+const analysisService = new AnalysisService();
 
 /**
  * GET /api/files/:fileId/download
@@ -344,6 +346,101 @@ router.get('/serve-by-path',
         success: false,
         error: 'Serve failed',
         message: error.message
+      });
+    }
+  })
+);
+
+/**
+ * POST /api/files/extract-text
+ * Extract text from a PDF file
+ */
+router.post('/extract-text',
+  authMiddleware.authenticate.bind(authMiddleware),
+  authMiddleware.requireActiveUser.bind(authMiddleware),
+  asyncHandler(async (req, res) => {
+    try {
+      const { fileId } = req.body;
+      const userId = req.user.id;
+
+      if (!fileId) {
+        return res.status(400).json({
+          success: false,
+          error: 'File ID required',
+          message: 'Please provide a fileId'
+        });
+      }
+
+      // Get file info from database
+      const fileInfo = await userService.getFileInfo(fileId, userId);
+
+      if (!fileInfo) {
+        return res.status(404).json({
+          success: false,
+          error: 'File not found',
+          message: 'File does not exist or you do not have access to it'
+        });
+      }
+
+      // Check if file is a PDF
+      if (!fileInfo.fileName.toLowerCase().endsWith('.pdf')) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid file type',
+          message: 'Only PDF files are supported for text extraction'
+        });
+      }
+
+      // Get file path
+      let filePath;
+      if (process.platform === 'win32' && /^[A-Za-z]:[\\/]/.test(fileInfo.filePath)) {
+        filePath = fileInfo.filePath;
+      } else if (process.platform !== 'win32' && path.isAbsolute(fileInfo.filePath)) {
+        filePath = fileInfo.filePath;
+      } else {
+        // Relative path - resolve from project root
+        filePath = path.join(process.cwd(), fileInfo.filePath.replace(/^\//, ''));
+      }
+
+      // Check if file exists
+      try {
+        await fs.access(filePath);
+      } catch (error) {
+        return res.status(404).json({
+          success: false,
+          error: 'File not found on disk',
+          message: 'The file does not exist at the expected location'
+        });
+      }
+
+      // Extract text from PDF
+      Logger.info('Extracting text from PDF', { fileId, filePath });
+      const extractedText = await analysisService.extractResumeText(filePath);
+
+      if (!extractedText || !extractedText.trim()) {
+        return res.status(400).json({
+          success: false,
+          error: 'Text extraction failed',
+          message: 'Could not extract text from the PDF file. The file might be empty or corrupted.'
+        });
+      }
+
+      res.json({
+        success: true,
+        text: extractedText
+      });
+
+    } catch (error) {
+      Logger.error('Failed to extract text from file', {
+        error: error.message,
+        userId: req.user?.id,
+        fileId: req.body?.fileId
+      });
+
+      res.status(500).json({
+        success: false,
+        error: 'Extraction failed',
+        message: error.message || 'Failed to extract text from file'
       });
     }
   })

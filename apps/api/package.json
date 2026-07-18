@@ -1,0 +1,8 @@
+{
+    "name": "@cvvin/api",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "lint": "eslint src/ --no-error-on-unmatched-pattern"
+    }
+}

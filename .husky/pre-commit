@@ -1,0 +1,4 @@
+#!/bin/sh
+
+echo "=== Running Pre-Commit Guardrails ==="
+bun run lint
